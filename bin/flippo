@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+ROOT = File.absolute_path(File.dirname(__FILE__) + "/..")
+PWD  = Dir.pwd
+
+ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"
+
+if ARGV[0] == "setup"
+  Dir.chdir("#{ROOT}/setup")
+  exec("bundle", "exec", "cap", "vagrant", "setup", "CONFIG_FILE=#{PWD}/flippo.json")
+else
+  abort "Unknown command"
+end

@@ -1,1 +1,2 @@
 require 'capistrano/setup'
+import './library.rb'
