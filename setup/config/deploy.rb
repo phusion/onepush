@@ -1,39 +1,18 @@
 require 'json'
+require 'stringio'
+require 'securerandom'
 require 'shellwords'
 require 'net/http'
 require 'net/https'
 require_relative '../../lib/config'
+require_relative '../../lib/version'
 
 fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFIG_FILE']
 CONFIG = JSON.parse(File.read(ENV['CONFIG_FILE']))
 SYSINFO = {}
 
-
-# TODO: set default values in CONFIG itself so that when dumping the manifest,
-# all values are set.
-Flippo.set_config_defaults(CONFIG)
 check_config_requirements(CONFIG)
-
-set :name, CONFIG['name'] || fatal_and_abort("The 'name' option must be set")
-set :type, CONFIG['type'] || fatal_and_abort("The 'type' option must be set")
-
-set :user, CONFIG['user'] || fetch(:name)
-set :app_dir, CONFIG['app_dir'] || "/var/www/#{fetch:name}"
-
-set :database_type, CONFIG['database_type'] || 'postgresql'
-set :database_name, CONFIG['database_name'] || fetch(:name)
-set :database_user, fetch(:user)
-
-set :setup_web_server, CONFIG.fetch('setup_web_server', true)
-
-set :ruby_manager, CONFIG['ruby_manager'] || 'rvm'
-set :web_server_type, CONFIG['web_server_type'] || 'nginx'
-
-set :passenger_enterprise, CONFIG.fetch('passenger_enterprise', false)
-set :passenger_enterprise_download_token, CONFIG['passenger_enterprise_download_token']
-if fetch(:passenger_enterprise) && !fetch(:passenger_enterprise_download_token)
-  fatal_and_abort "If you set passenger_enterprise to true, then you must also set passenger_enterprise_download_token"
-end
+Flippo.set_config_defaults(CONFIG)
 
 
 def apt_get_update
@@ -42,19 +21,47 @@ def apt_get_update
 end
 
 def apt_get_install(packages)
-  if !SYSINFO[:apt_updated]
-    #::File.exists?('/var/lib/apt/periodic/update-success-stamp') &&
-    #::File.mtime('/var/lib/apt/periodic/update-success-stamp') > Time.now - 86400*2
-    script = "[[ -e /var/lib/apt/periodic/update-success-stamp ]] && " +
-      "timestamp=`stat -c %Y /var/lib/apt/periodic/update-success-stamp` && " +
-      "threshold=`date +%s` && " +
-      "(( threshold = threshold - 86400 * 2 )) && " +
-      '[[ "$timestamp" -gt "$threshold" ]]'
-    if !test(script)
-      apt_get_update
+  packages = filter_non_installed_packages(packages)
+  if !packages.empty?
+    if !SYSINFO[:apt_updated]
+      script = "[[ -e /var/lib/apt/periodic/update-success-stamp ]] && " +
+        "timestamp=`stat -c %Y /var/lib/apt/periodic/update-success-stamp` && " +
+        "threshold=`date +%s` && " +
+        "(( threshold = threshold - 86400 * 2 )) && " +
+        '[[ "$timestamp" -gt "$threshold" ]]'
+      if !test(script)
+        apt_get_update
+      end
+    end
+    execute "apt-get install -y #{packages.join(' ')}"
+  end
+end
+
+def check_packages_installed(names)
+  case SYSINFO[:os_class]
+  when :redhat
+    raise "TODO"
+  when :debian
+    result = {}
+    installed = capture("dpkg-query -s #{names.join(' ')} | grep '^Package: ' 2>/dev/null")
+    installed = installed.gsub(/^Package: /, '').split("\n")
+    names.each do |name|
+      result[name] = installed.include?(name)
+    end
+    result
+  else
+    raise "Bug"
+  end
+end
+
+def filter_non_installed_packages(names)
+  result = []
+  check_packages_installed(names).each_pair do |name, installed|
+    if !installed
+      result << name
     end
   end
-  execute "apt-get install -y #{packages}"
+  result
 end
 
 def b(script)
@@ -87,7 +94,7 @@ def install_essentials
     when :redhat
       execute "yum install -y git sudo curl gcc g++ make"
     when :debian
-      apt_get_install "git sudo curl apt-transport-https ca-certificates lsb-release build-essential"
+      apt_get_install %w(git sudo curl apt-transport-https ca-certificates lsb-release build-essential)
     else
       raise "Bug"
     end
@@ -95,9 +102,9 @@ def install_essentials
 end
 
 def install_language_runtime
-  case fetch(:type)
+  case CONFIG['type']
   when 'ruby'
-    case fetch(:ruby_manager)
+    case CONFIG['ruby_manager']
     when 'rvm'
       install_rvm
     end
@@ -135,8 +142,8 @@ end
 def install_passenger_and_web_server_from_apt(codename)
   if !test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
     config = StringIO.new
-    if fetch(:passenger_enterprise)
-      config.puts "deb https://download:#{fetch(:passenger_enterprise_download_token)}@" +
+    if CONFIG['passenger_enterprise']
+      config.puts "deb https://download:#{CONFIG['passenger_enterprise_download_token']}@" +
         "www.phusionpassenger.com/enterprise_apt #{codename} main"
     else
       config.puts "deb https://oss-binaries.phusionpassenger.com/apt/passenger #{codename} main"
@@ -148,10 +155,10 @@ def install_passenger_and_web_server_from_apt(codename)
   end
   execute "chmod 600 /etc/apt/sources.list.d/passenger.list"
 
-  if fetch(:setup_web_server)
-    case fetch(:web_server_type)
+  if CONFIG['setup_web_server']
+    case CONFIG['web_server_type']
     when 'nginx'
-      apt_get_install "nginx-extras passenger"
+      apt_get_install %w(nginx-extras passenger)
       md5 = capture("md5sum /etc/nginx/nginx.conf")
       execute "sed -i 's|# passenger_root|passenger_root|' /etc/nginx/nginx.conf"
       execute "sed -i 's|# passenger_ruby|passenger_ruby|' /etc/nginx/nginx.conf"
@@ -193,9 +200,9 @@ def create_user(name)
     if !test("id -u #{name}")
       execute "adduser", "--disabled-password", "--gecos", name, name
     end
-    case fetch(:type)
+    case CONFIG['type']
     when 'ruby'
-      case fetch(:ruby_manager)
+      case CONFIG['ruby_manager']
       when 'rvm'
         execute "usermod -a -G rvm #{name}"
       end
@@ -204,11 +211,11 @@ def create_user(name)
 end
 
 def create_app_dir(path, owner)
-  primary_dirs = "#{path} #{path}/releases #{path}/shared #{path}/repo"
+  primary_dirs = "#{path} #{path}/releases #{path}/shared #{path}/flippo_repo"
   on roles(:app) do
     execute "mkdir -p #{primary_dirs} && chown #{owner}: #{primary_dirs} && chmod u=rwx,g=rx,o=x #{primary_dirs}"
     execute "mkdir -p #{path}/shared/config && chown #{owner}: #{path}/shared/config"
-    execute "cd #{path}/repo && if ! [[ -e HEAD ]]; then sudo -u #{owner} -H git init --bare; fi"
+    execute "cd #{path}/flippo_repo && if ! [[ -e HEAD ]]; then sudo -u #{owner} -H git init --bare; fi"
   end
 end
 
@@ -225,7 +232,7 @@ def install_dbms(type)
     when :debian
       case type
       when 'postgresql'
-        apt_get_install "postgresql postgresql-client libpq-dev"
+        apt_get_install %w(postgresql postgresql-client libpq-dev)
       else
         abort "Unsupported database type. Only PostgreSQL is supported."
       end
@@ -280,8 +287,24 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
       config.rewind
       upload! config, "#{app_dir}/shared/config/database.yml"
     end
-    execute "chown #{owner}: #{app_dir}/shared/config/database.yml"
-    execute "chmod 600 #{app_dir}/shared/config/database.yml"
+
+    if !test("[[ -e #{app_dir}/shared/config/secrets.yml ]]")
+      config = StringIO.new
+      config.puts "default_settings: &default_settings"
+      config.puts "  secret_key_base: #{SecureRandom.hex(64)}"
+      config.puts
+      ["development", "staging", "production"].each do |env|
+        config.puts "#{env}:"
+        config.puts "  <<: *default_settings"
+        config.puts
+      end
+      config.rewind
+      upload! config, "#{app_dir}/shared/config/secrets.yml"
+    end
+
+    execute "cd #{app_dir}/shared/config && " +
+      "chmod 600 database.yml secrets.yml && " +
+      "chown #{owner}: database.yml secrets.yml"
   end
 end
 
@@ -291,13 +314,17 @@ def install_flippo_manifest(name, app_dir)
   config.rewind
 
   on roles(:app) do
-    upload! config, "#{app_dir}/flippo.json"
-    execute "chown root: #{app_dir}/flippo.json && " +
-      "chmod 600 #{app_dir}/flippo.json"
-    execute "mkdir -p /etc/flippo && " +
-      "cd /etc/flippo && " +
+    upload! config, "#{app_dir}/flippo-setup.json"
+    execute "chown root: #{app_dir}/flippo-setup.json && " +
+      "chmod 600 #{app_dir}/flippo-setup.json"
+    execute "mkdir -p /etc/flippo/apps && " +
+      "cd /etc/flippo/apps && " +
       "rm -f #{name} && " +
       "ln -s #{app_dir} #{name}"
+    execute "mkdir -p /etc/flippo/setup && " +
+      "cd /etc/flippo/setup && " +
+      "date +%s > last_run_time && " +
+      "echo #{Flippo::VERSION_STRING} > last_run_version"
   end
 end
 
@@ -307,13 +334,13 @@ task :setup do
   install_essentials
   install_language_runtime
   install_passenger_and_web_server
-  create_user(fetch(:user))
-  create_app_dir(fetch(:app_dir), fetch(:user))
-  install_dbms(fetch(:database_type))
-  setup_database(fetch(:database_type), fetch(:database_name),
-    fetch(:database_user))
-  create_app_database_config(fetch(:app_dir), fetch(:user),
-    fetch(:database_type), fetch(:database_name),
-    fetch(:database_user))
-  install_flippo_manifest(fetch(:name), fetch(:app_dir))
+  create_user(CONFIG['user'])
+  create_app_dir(CONFIG['app_dir'], CONFIG['user'])
+  install_dbms(CONFIG['database_type'])
+  setup_database(CONFIG['database_type'], CONFIG['database_name'],
+    CONFIG['database_user'])
+  create_app_database_config(CONFIG['app_dir'], CONFIG['user'],
+    CONFIG['database_type'], CONFIG['database_name'],
+    CONFIG['database_user'])
+  install_flippo_manifest(CONFIG['name'], CONFIG['app_dir'])
 end
