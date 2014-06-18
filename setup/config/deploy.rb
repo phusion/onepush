@@ -14,109 +14,6 @@ check_config_requirements(CONFIG)
 Flippo.set_config_defaults(CONFIG)
 
 
-def apt_get_update(host)
-  execute "apt-get update && touch /var/lib/apt/periodic/update-success-stamp"
-  host.add_property(:apt_get_updated, true)
-end
-
-def apt_get_install(host, packages)
-  packages = filter_non_installed_packages(host, packages)
-  if !packages.empty?
-    if !host.properties.fetch(:apt_get_updated)
-      two_days = 2 * 60 * 60 * 24
-      script = "[[ -e /var/lib/apt/periodic/update-success-stamp ]] && " +
-        "timestamp=`stat -c %Y /var/lib/apt/periodic/update-success-stamp` && " +
-        "threshold=`date +%s` && " +
-        "(( threshold = threshold - #{two_days} )) && " +
-        '[[ "$timestamp" -gt "$threshold" ]]'
-      if !test(script)
-        apt_get_update(host)
-      end
-    end
-    execute "apt-get install -y #{packages.join(' ')}"
-  end
-  packages.size
-end
-
-def check_packages_installed(host, names)
-  case host.properties.fetch(:os_class)
-  when :redhat
-    raise "TODO"
-  when :debian
-    result = {}
-    installed = capture("dpkg-query -s #{names.join(' ')} 2>/dev/null | grep '^Package: '; true")
-    installed = installed.gsub(/^Package: /, '').split("\n")
-    names.each do |name|
-      result[name] = installed.include?(name)
-    end
-    result
-  else
-    raise "Bug"
-  end
-end
-
-def filter_non_installed_packages(host, names)
-  result = []
-  check_packages_installed(host, names).each_pair do |name, installed|
-    if !installed
-      result << name
-    end
-  end
-  result
-end
-
-def b(script)
-  full_script = "set -o pipefail && #{script}"
-  "/bin/bash -c #{Shellwords.escape(full_script)}"
-end
-
-task :autodetect_os do
-  on roles(:app, :db) do |host|
-    if test("[[ -e /etc/redhat-release || -e /etc/centos-release ]]")
-      host.set(:os_class, :redhat)
-      info "Red Hat or CentOS detected"
-    elsif test("[[ -e /etc/system-release ]]") && capture("/etc/system-release") =~ /Amazon/
-      host.set(:os_class, :redhat)
-      info "Amazon Linux detected"
-    elsif test("[[ -e /usr/bin/apt-get ]]")
-      # We don't use /etc/debian_version or things like that because
-      # it's not always installed.
-      host.set(:os_class, :debian)
-      info "Debian or Ubuntu detected"
-    else
-      abort "Unsupported server operating system. Flippo only supports Red Hat, CentOS, Amazon Linux, Debian and Ubuntu"
-    end
-  end
-end
-
-task :install_essentials => :autodetect_os do
-  on roles(:app, :db) do
-    execute "mkdir -p /var/run/flippo && chmod 700 /var/run/flippo"
-  end
-
-  on roles(:app) do |host|
-    case host.properties.fetch(:os_class)
-    when :redhat
-      execute "yum install -y git sudo curl gcc g++ make"
-    when :debian
-      apt_get_install(host, %w(git sudo curl apt-transport-https ca-certificates lsb-release build-essential))
-    else
-      raise "Bug"
-    end
-  end
-
-  on roles(:db) do |host|
-    case host.properties.fetch(:os_class)
-    when :redhat
-      execute "yum install -y sudo"
-    when :debian
-      apt_get_install(host, %w(sudo apt-transport-https ca-certificates lsb-release))
-    else
-      raise "Bug"
-    end
-  end
-end
-
 def install_language_runtime
   case CONFIG['type']
   when 'ruby'
@@ -338,7 +235,14 @@ task :restart_services => :autodetect_os do
     when :debian
       case CONFIG['web_server_type']
       when 'nginx'
-        raise "TODO"
+        if test("[[ -e /var/run/flippo/restart_web_server ]]")
+          execute "rm -f /var/run/flippo/restart_web_server"
+          if test("[[ -e /etc/init.d/nginx ]]")
+            execute "/etc/init.d/nginx restart"
+          elsif test("[[ -e /etc/service/nginx ]]")
+            execute "sv restart /etc/service/nginx"
+          end
+        end
       when 'apache'
         execute(
           "if [[ -e /var/run/flippo/restart_web_server ]]; then " +
@@ -356,7 +260,7 @@ end
 desc "Setup the server environment"
 task :setup do
   invoke :autodetect_os
-  install_essentials
+  invoke :install_essentials
   install_language_runtime
   invoke :install_passenger
   invoke :install_web_server

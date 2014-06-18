@@ -1,13 +1,13 @@
 task :install_passenger => :install_essentials do
   if CONFIG['install_passenger']
     on roles(:app) do |host|
-      if !test("[[ -e /usr/bin/passenger-config || -e /opt/passenger/current/bin/passenger-config ]]")
+      if !passenger_installed?
         case host.properties.fetch(:os_class)
         when :redhat
           install_passenger_from_source(host)
         when :debian
           codename = capture(b "lsb_release -c | awk '{ print $2 }'").strip
-          if !CONFIG['passenger_force_install_from_source'] && passenger_apt_repo_available?(codename)
+          if can_install_passenger_from_apt_repo?(codename)
             install_passenger_from_apt(host, codename)
           else
             install_passenger_from_source(host)
@@ -18,6 +18,14 @@ task :install_passenger => :install_essentials do
       end
     end
   end
+end
+
+def passenger_installed?
+  test("[[ -e /usr/bin/passenger-config || -e /opt/passenger/current/bin/passenger-config ]]")
+end
+
+def can_install_passenger_from_apt_repo?(codename)
+  !CONFIG['passenger_force_install_from_source'] && passenger_apt_repo_available?(codename)
 end
 
 def passenger_apt_repo_available?(codename)
@@ -83,10 +91,22 @@ def install_passenger_from_source(host)
     # be able to run Passenger.
     case host.properties.fetch(:os_class)
     when :redhat
-      execute "yum install -y ruby rubygem-rake"
+      yum_install(host, %w(ruby rubygem-rake))
     when :debian
       apt_get_install(host, %w(ruby ruby-dev rake))
+    else
+      raise "Bug"
     end
+  end
+
+  # Install dependencies.
+  case host.properties.fetch(:os_class)
+  when :redhat
+    raise "TODO"
+  when :debian
+    apt_get_install(host, %w(libcurl4-openssl-dev zlib1g-dev))
+  else
+    raise "Bug"
   end
 
   # Install Passenger.
