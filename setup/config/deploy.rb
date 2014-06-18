@@ -165,21 +165,23 @@ def install_common_ruby_app_dependencies
 end
 
 def install_passenger_and_web_server
-  on roles(:app) do |host|
-    case host.properties.fetch(:os_class)
-    when :redhat
-      install_passenger_from_source
-      install_web_server_with_passenger_from_source
-    when :debian
-      codename = capture(b "lsb_release -c | awk '{ print $2 }'").strip
-      if passenger_apt_repo_available?(codename)
-        install_passenger_and_web_server_from_apt(host, codename)
-      else
+  if CONFIG['install_passenger']
+    on roles(:app) do |host|
+      case host.properties.fetch(:os_class)
+      when :redhat
         install_passenger_from_source
         install_web_server_with_passenger_from_source
+      when :debian
+        codename = capture(b "lsb_release -c | awk '{ print $2 }'").strip
+        if passenger_apt_repo_available?(codename)
+          install_passenger_and_web_server_from_apt(host, codename)
+        else
+          install_passenger_from_source
+          install_web_server_with_passenger_from_source
+        end
+      else
+        raise "Bug"
       end
-    else
-      raise "Bug"
     end
   end
 end
