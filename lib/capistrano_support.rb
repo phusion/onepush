@@ -131,10 +131,12 @@ def autodetect_passenger!
   result = { :ruby => ruby }
   if test("[[ -e /usr/bin/passenger-config ]]")
     result[:installed_from_system_package] = true
+    result[:bindir]            = "/usr/bin"
     result[:nginx_installer]   = "/usr/bin/passenger-install-nginx-module"
     result[:apache2_installer] = "/usr/bin/passenger-install-apache2-module"
     result[:config_command]    = "/usr/bin/passenger-config"
   elsif test("[[ -e /opt/passenger/current/bin/passenger-config ]]")
+    result[:bindir]            = "/opt/passenger/current/bin"
     result[:nginx_installer]   = "#{ruby} /opt/passenger/current/bin/passenger-install-nginx-module"
     result[:apache2_installer] = "#{ruby} /opt/passenger/current/bin/passenger-install-apache2-module"
     result[:config_command]    = "#{ruby} /opt/passenger/current/bin/passenger-config"

@@ -16,6 +16,7 @@ task :install_passenger => :install_essentials do
           raise "Bug"
         end
       end
+      add_passenger_bindir_to_path
     end
   end
 end
@@ -131,5 +132,20 @@ def install_passenger_from_source(host)
     ensure
       execute("rm -rf #{tmpdir}")
     end
+  end
+end
+
+def add_passenger_bindir_to_path
+  passenger_info = autodetect_passenger!
+  installed_from_system_package = passenger_info[:installed_from_system_package]
+  bindir = passenger_info[:bindir]
+
+  if !installed_from_system_package && test("[[ -e /etc/profile.d && ! -e /etc/profile.d/passenger.sh ]]")
+    io = StringIO.new
+    io.puts "export PATH=$PATH:#{bindir}"
+    io.rewind
+
+    upload!(io, "/etc/profile.d/passenger.sh")
+    execute "chmod 755 /etc/profile.d/passenger.sh"
   end
 end
