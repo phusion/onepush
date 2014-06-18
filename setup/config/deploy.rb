@@ -35,6 +35,7 @@ def apt_get_install(host, packages)
     end
     execute "apt-get install -y #{packages.join(' ')}"
   end
+  packages.size
 end
 
 def check_packages_installed(host, names)
@@ -43,7 +44,7 @@ def check_packages_installed(host, names)
     raise "TODO"
   when :debian
     result = {}
-    installed = capture("dpkg-query -s #{names.join(' ')} | grep '^Package: ' 2>/dev/null")
+    installed = capture("dpkg-query -s #{names.join(' ')} 2>/dev/null | grep '^Package: '; true")
     installed = installed.gsub(/^Package: /, '').split("\n")
     names.each do |name|
       result[name] = installed.include?(name)
@@ -69,7 +70,7 @@ def b(script)
   "/bin/bash -c #{Shellwords.escape(full_script)}"
 end
 
-def autodetect_os
+task :autodetect_os do
   on roles(:app, :db) do |host|
     if test("[[ -e /etc/redhat-release || -e /etc/centos-release ]]")
       host.set(:os_class, :redhat)
@@ -88,7 +89,11 @@ def autodetect_os
   end
 end
 
-def install_essentials
+task :install_essentials => :autodetect_os do
+  on roles(:app, :db) do
+    execute "mkdir -p /var/run/flippo && chmod 700 /var/run/flippo"
+  end
+
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
@@ -115,11 +120,15 @@ end
 def install_language_runtime
   case CONFIG['type']
   when 'ruby'
-    case CONFIG['ruby_manager']
-    when 'rvm'
-      install_rvm
-    end
+    invoke :install_ruby_runtime
     install_common_ruby_app_dependencies
+  end
+end
+
+task :install_ruby_runtime do
+  case CONFIG['ruby_manager']
+  when 'rvm'
+    install_rvm
   end
 end
 
@@ -162,84 +171,6 @@ def install_common_ruby_app_dependencies
       end
     end
   end
-end
-
-def install_passenger_and_web_server
-  if CONFIG['install_passenger']
-    on roles(:app) do |host|
-      case host.properties.fetch(:os_class)
-      when :redhat
-        install_passenger_from_source
-        install_web_server_with_passenger_from_source
-      when :debian
-        codename = capture(b "lsb_release -c | awk '{ print $2 }'").strip
-        if passenger_apt_repo_available?(codename)
-          install_passenger_and_web_server_from_apt(host, codename)
-        else
-          install_passenger_from_source
-          install_web_server_with_passenger_from_source
-        end
-      else
-        raise "Bug"
-      end
-    end
-  end
-end
-
-def install_passenger_and_web_server_from_apt(host, codename)
-  if !test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
-    config = StringIO.new
-    if CONFIG['passenger_enterprise']
-      config.puts "deb https://download:#{CONFIG['passenger_enterprise_download_token']}@" +
-        "www.phusionpassenger.com/enterprise_apt #{codename} main"
-    else
-      config.puts "deb https://oss-binaries.phusionpassenger.com/apt/passenger #{codename} main"
-    end
-    config.rewind
-    upload! config, "/etc/apt/sources.list.d/passenger.list"
-    execute "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7"
-    apt_get_update(host)
-  end
-  execute "chmod 600 /etc/apt/sources.list.d/passenger.list"
-
-  if CONFIG['install_web_server']
-    case CONFIG['web_server_type']
-    when 'nginx'
-      apt_get_install(host, %w(nginx-extras passenger))
-      md5 = capture("md5sum /etc/nginx/nginx.conf")
-      execute "sed -i 's|# passenger_root|passenger_root|' /etc/nginx/nginx.conf"
-      execute "sed -i 's|# passenger_ruby|passenger_ruby|' /etc/nginx/nginx.conf"
-
-      # Restart Nginx if config changed.
-      if capture("md5sum /etc/nginx/nginx.conf") != md5
-        execute "service nginx restart"
-      end
-    when 'apache'
-      apt_get_install(host, "libapache2-mod-passenger")
-      if !test("[[ -e /etc/apache2/mods-enabled/passenger.load ]]")
-        execute "a2enmod passenger && service apache2 restart"
-      end
-    else
-      abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
-    end
-  end
-end
-
-def install_passenger_from_source
-  # This should be separated to its own project. A Passenger Version Manager or something.
-  raise "TODO"
-end
-
-def install_web_server_with_passenger_from_source
-  raise "TODO"
-end
-
-def passenger_apt_repo_available?(codename)
-  http = Net::HTTP.new("oss-binaries.phusionpassenger.com", 443)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-  response = http.request(Net::HTTP::Head.new("/apt/passenger/dists/#{codename}/Release"))
-  response.code == "200"
 end
 
 def create_user(name)
@@ -399,12 +330,36 @@ def install_flippo_manifest(name, app_dir)
   end
 end
 
+task :restart_services => :autodetect_os do
+  on roles(:app) do |host|
+    case host.properties.fetch(:os_class)
+    when :redhat
+      raise "TODO"
+    when :debian
+      case CONFIG['web_server_type']
+      when 'nginx'
+        raise "TODO"
+      when 'apache'
+        execute(
+          "if [[ -e /var/run/flippo/restart_web_server ]]; then " +
+            "rm -f /var/run/flippo/restart_web_server && service apache2 restart; " +
+          "fi")
+      else
+        abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
+      end
+    else
+      raise "Bug"
+    end
+  end
+end
+
 desc "Setup the server environment"
 task :setup do
-  autodetect_os
+  invoke :autodetect_os
   install_essentials
   install_language_runtime
-  install_passenger_and_web_server
+  invoke :install_passenger
+  invoke :install_web_server
   create_user(CONFIG['user'])
   create_app_dir(CONFIG['app_dir'], CONFIG['user'])
   install_dbms(CONFIG['database_type'])
@@ -414,4 +369,5 @@ task :setup do
     CONFIG['database_type'], CONFIG['database_name'],
     CONFIG['database_user'])
   install_flippo_manifest(CONFIG['name'], CONFIG['app_dir'])
+  invoke :restart_services
 end

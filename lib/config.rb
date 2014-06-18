@@ -18,6 +18,7 @@ module Flippo
       config['web_server_type'] ||= 'nginx'
 
       set_boolean_default(config, 'passenger_enterprise', false)
+      set_boolean_default(config, 'passenger_force_install_from_source', false)
 
       config['flippo_version'] = VERSION_STRING
       config['flippo_config_format_version'] = CONFIG_FORMAT_VERSION_STRING

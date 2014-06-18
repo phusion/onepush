@@ -1,2 +1,4 @@
 require 'capistrano/setup'
 import '../lib/capistrano_support.rb'
+import 'config/passenger.rb'
+import 'config/web_server.rb'
