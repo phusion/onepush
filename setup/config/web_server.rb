@@ -3,6 +3,7 @@ task :install_web_server => [:install_essentials, :install_passenger] do
     case CONFIG['web_server_type']
     when 'nginx'
       install_nginx
+      enable_passenger_nginx
       install_nginx_service
     when 'apache'
       install_apache
@@ -55,17 +56,6 @@ def install_nginx_from_phusion_apt(host)
       execute "apt-get remove -y nginx nginx-core nginx-light nginx-full nginx-extras nginx-naxsi"
     end
     apt_get_install(host, %w(nginx-extras))
-
-    execute "sed -i 's|# passenger_root|passenger_root|' /etc/nginx/nginx.conf"
-    execute "sed -i 's|# passenger_ruby|passenger_ruby|' /etc/nginx/nginx.conf"
-    if !test("grep -q passenger_root /etc/nginx/nginx.conf")
-      passenger_root = capture("/usr/bin/passenger-config --root").strip
-      config = StringIO.new
-      config.puts "passenger_root #{passenger_root};"
-      config.puts "passenger_ruby #{find_ruby_interpreter_for_passenger};"
-      config.rewind
-      upload!("/etc/nginx/conf.d/passenger.conf", config)
-    end
   else
     raise "Bug"
   end
@@ -74,18 +64,56 @@ def install_nginx_from_phusion_apt(host)
 end
 
 def install_nginx_from_source_with_passenger(host)
-  ruby = find_ruby_interpreter_for_passenger
-  if test("[[ -e /usr/bin/passenger-install-nginx-module ]]")
-    installer = "/usr/bin/passenger-install-nginx-module"
-  else
-    installer = "#{ruby} /opt/passenger/current/bin/passenger-install-nginx-module"
-  end
+  installer = autodetect_passenger![:nginx_installer]
   execute "#{installer} --auto --auto-download --prefix=/opt/nginx"
+end
+
+def enable_passenger_nginx
+  if CONFIG['install_passenger']
+    on roles(:app) do
+      config_file      = autodetect_nginx![:config_file]
+      passenger_info   = autodetect_passenger!
+      ruby             = passenger_info[:ruby]
+      passenger_config = passenger_info[:config_command]
+
+      execute "sed -i 's|# passenger_root|passenger_root|' #{config_file}"
+      execute "sed -i 's|# passenger_ruby|passenger_ruby|' #{config_file}"
+
+      if !test("grep -q passenger_root #{config_file}")
+        passenger_root = capture("#{passenger_config} --root").strip
+
+        io = StringIO.new
+        download!(config_file, io)
+
+        config = io.string
+        modified = config.sub!(/^http {/,
+            "http {\n" +
+            "    passenger_root #{passenger_root};\n" +
+            "    passenger_ruby #{ruby};\n")
+
+        if modified
+          io = StringIO.new
+          io.puts(config)
+          io.rewind
+          upload!(io, config_file)
+          execute "touch /var/run/flippo/restart_web_server"
+        else
+          fatal_and_abort "Unable to modify the Nginx configuration file to enable Phusion Passenger. " +
+            "Please do it manually: add the `passenger_root` and `passenger_ruby` directives to " +
+            "#{config_file}, inside the `http` block."
+        end
+      end
+    end
+  end
 end
 
 def install_nginx_service
   on roles(:app) do
-    if test("[[ ! -e /usr/bin/nginx && -e /opt/nginx/sbin/nginx ]]")
+    nginx_info  = autodetect_nginx!
+    nginx_bin   = nginx_info[:binary]
+    config_file = nginx_info[:config_file]
+
+    if !nginx_info[:installed_from_system_package]
       case host.properties.fetch(:os_class)
       when :redhat
         yum_install(host, %w(runit))
@@ -95,27 +123,27 @@ def install_nginx_service
         raise "Bug"
       end
 
-      if !test("grep -q '^daemon ' /opt/nginx/conf/nginx.conf")
-        info "Disabling daemon mode in /opt/nginx/conf/nginx.conf"
+      if !test("grep -q '^daemon ' #{config_file}")
+        info "Disabling daemon mode in #{config_file}"
+        io = StringIO.new
+        download!(config_file, io)
+
         config = StringIO.new
-        download!("/opt/nginx/conf/nginx.conf", config)
+        config.puts "daemon off;"
+        config.puts(io.string)
+        config.rewind
 
-        new_config = StringIO.new
-        new_config.puts "daemon off;"
-        new_config.puts(config.string)
-        new_config.rewind
-
-        upload!(new_config, "/opt/nginx/conf/nginx.conf")
+        upload!(config, "/opt/nginx/conf/nginx.conf")
       elsif test("grep '^daemon on;' /opt/nginx/conf/nginx.conf")
         info "Disabling daemon mode in /opt/nginx/conf/nginx.conf"
+        io = StringIO.new
+        download!("/opt/nginx/conf/nginx.conf", io)
+
         config = StringIO.new
-        download!("/opt/nginx/conf/nginx.conf", config)
+        config.puts(io.string.sub(/^daemon on;/, 'daemon off;'))
+        config.rewind
 
-        new_config = StringIO.new
-        new_config.puts(config.string.sub(/^daemon on;/, 'daemon off;'))
-        new_config.rewind
-
-        upload!(new_config, "/opt/nginx/conf/nginx.conf")
+        upload!(config, "/opt/nginx/conf/nginx.conf")
       end
 
       if !test("[[ -e /etc/service/nginx/run ]]")
@@ -124,7 +152,7 @@ def install_nginx_service
         script.puts "#!/bin/bash"
         script.puts "# Installed by Flippo."
         script.puts "set -e"
-        script.puts "exec /opt/nginx/sbin/nginx"
+        script.puts "exec #{nginx_bin}"
         script.rewind
 
         execute "mkdir -p /etc/service/nginx"
@@ -184,7 +212,7 @@ def install_passenger_apache_module_from_apt(host)
 end
 
 def install_passenger_apache_module_from_source(host)
-  ruby = find_ruby_interpreter_for_passenger
+  ruby = autodetect_ruby_interpreter_for_passenger!
 
   # Locate location of the Apache module.
   installer = "#{ruby} /opt/passenger/current/bin/passenger-install-apache2-module"
@@ -209,18 +237,5 @@ def install_passenger_apache_module_from_source(host)
     execute "#{installer} --snippet > /etc/apache2/mods-available/passenger.load"
     execute "echo > /etc/apache2/mods-available/passenger.conf"
     execute "a2enmod passenger && touch /var/run/flippo/restart_web_server"
-  end
-end
-
-
-# Determine Ruby interpreter to use for running the Phusion Passenger installer.
-def find_ruby_interpreter_for_passenger
-  if test("[[ -e /usr/bin/ruby ]]")
-    "/usr/bin/ruby"
-  elsif test("[[ -e /usr/local/rvm/wrappers/default/ruby ]]")
-    "/usr/local/rvm/wrappers/default/ruby"
-  else
-    abort "Unable to find a Ruby interpreter on the system. This is probably " +
-      "a bug in Flippo. Please report this to the authors."
   end
 end

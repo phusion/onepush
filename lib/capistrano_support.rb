@@ -108,3 +108,50 @@ def filter_non_installed_packages(host, names)
   end
   result
 end
+
+
+def autodetect_nginx!
+  result = {}
+  if test("[[ -e /usr/bin/nginx && -e /etc/nginx/nginx.conf ]]")
+    result[:installed_from_system_package] = true
+    result[:binary]      = "/usr/bin/nginx"
+    result[:config_file] = "/etc/nginx/nginx.conf"
+  elsif test("[[ -e /opt/nginx/sbin/nginx && -e /opt/nginx/conf/nginx.conf ]]")
+    result[:binary]      = "/opt/nginx/sbin/nginx"
+    result[:config_file] = "/opt/nginx/conf/nginx.conf"
+  else
+    fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Flippo. " +
+      "Please report this to the authors.")
+  end
+  result
+end
+
+def autodetect_passenger!
+  ruby   = autodetect_ruby_interpreter_for_passenger!
+  result = { :ruby => ruby }
+  if test("[[ -e /usr/bin/passenger-config ]]")
+    result[:installed_from_system_package] = true
+    result[:nginx_installer]   = "/usr/bin/passenger-install-nginx-module"
+    result[:apache2_installer] = "/usr/bin/passenger-install-apache2-module"
+    result[:config_command]    = "/usr/bin/passenger-config"
+  elsif test("[[ -e /opt/passenger/current/bin/passenger-config ]]")
+    result[:nginx_installer]   = "#{ruby} /opt/passenger/current/bin/passenger-install-nginx-module"
+    result[:apache2_installer] = "#{ruby} /opt/passenger/current/bin/passenger-install-apache2-module"
+    result[:config_command]    = "#{ruby} /opt/passenger/current/bin/passenger-config"
+  else
+    fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in Flippo. " +
+      "Please report this to the authors.")
+  end
+  result
+end
+
+def autodetect_ruby_interpreter_for_passenger!
+  if test("[[ -e /usr/bin/ruby ]]")
+    "/usr/bin/ruby"
+  elsif test("[[ -e /usr/local/rvm/wrappers/default/ruby ]]")
+    "/usr/local/rvm/wrappers/default/ruby"
+  else
+    abort "Unable to find a Ruby interpreter on the system. This is probably " +
+      "a bug in Flippo. Please report this to the authors."
+  end
+end
