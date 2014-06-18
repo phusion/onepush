@@ -9,7 +9,8 @@ module Flippo
     config['database_name'] ||= config['name']
     config['database_user'] = config['user']
 
-    config['setup_web_server'] = config.fetch('setup_web_server', true)
+    config['install_web_server'] = config.fetch('install_web_server', true)
+    config['install_common_ruby_app_dependencies'] = config.fetch('install_common_ruby_app_dependencies', true)
 
     config['ruby_manager'] ||= 'rvm'
     config['web_server_type'] ||= 'nginx'

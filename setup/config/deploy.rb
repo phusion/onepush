@@ -9,36 +9,36 @@ require_relative '../../lib/version'
 
 fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFIG_FILE']
 CONFIG = JSON.parse(File.read(ENV['CONFIG_FILE']))
-SYSINFO = {}
 
 check_config_requirements(CONFIG)
 Flippo.set_config_defaults(CONFIG)
 
 
-def apt_get_update
-  execute "apt-get update && date +%s > /var/lib/apt/periodic/update-success-stamp"
-  SYSINFO[:apt_updated] = true
+def apt_get_update(host)
+  execute "apt-get update && touch /var/lib/apt/periodic/update-success-stamp"
+  host.add_property(:apt_get_updated, true)
 end
 
-def apt_get_install(packages)
-  packages = filter_non_installed_packages(packages)
+def apt_get_install(host, packages)
+  packages = filter_non_installed_packages(host, packages)
   if !packages.empty?
-    if !SYSINFO[:apt_updated]
+    if !host.properties.fetch(:apt_get_updated)
+      two_days = 2 * 60 * 60 * 24
       script = "[[ -e /var/lib/apt/periodic/update-success-stamp ]] && " +
         "timestamp=`stat -c %Y /var/lib/apt/periodic/update-success-stamp` && " +
         "threshold=`date +%s` && " +
-        "(( threshold = threshold - 86400 * 2 )) && " +
+        "(( threshold = threshold - #{two_days} )) && " +
         '[[ "$timestamp" -gt "$threshold" ]]'
       if !test(script)
-        apt_get_update
+        apt_get_update(host)
       end
     end
     execute "apt-get install -y #{packages.join(' ')}"
   end
 end
 
-def check_packages_installed(names)
-  case SYSINFO[:os_class]
+def check_packages_installed(host, names)
+  case host.properties.fetch(:os_class)
   when :redhat
     raise "TODO"
   when :debian
@@ -54,9 +54,9 @@ def check_packages_installed(names)
   end
 end
 
-def filter_non_installed_packages(names)
+def filter_non_installed_packages(host, names)
   result = []
-  check_packages_installed(names).each_pair do |name, installed|
+  check_packages_installed(host, names).each_pair do |name, installed|
     if !installed
       result << name
     end
@@ -70,17 +70,17 @@ def b(script)
 end
 
 def autodetect_os
-  on roles(:app) do
+  on roles(:app, :db) do |host|
     if test("[[ -e /etc/redhat-release || -e /etc/centos-release ]]")
-      SYSINFO[:os_class] = :redhat
+      host.set(:os_class, :redhat)
       info "Red Hat or CentOS detected"
     elsif test("[[ -e /etc/system-release ]]") && capture("/etc/system-release") =~ /Amazon/
-      SYSINFO[:os_class] = :redhat
+      host.set(:os_class, :redhat)
       info "Amazon Linux detected"
     elsif test("[[ -e /usr/bin/apt-get ]]")
       # We don't use /etc/debian_version or things like that because
       # it's not always installed.
-      SYSINFO[:os_class] = :debian
+      host.set(:os_class, :debian)
       info "Debian or Ubuntu detected"
     else
       abort "Unsupported server operating system. Flippo only supports Red Hat, CentOS, Amazon Linux, Debian and Ubuntu"
@@ -89,12 +89,23 @@ def autodetect_os
 end
 
 def install_essentials
-  on roles(:app) do
-    case SYSINFO[:os_class]
+  on roles(:app) do |host|
+    case host.properties.fetch(:os_class)
     when :redhat
       execute "yum install -y git sudo curl gcc g++ make"
     when :debian
-      apt_get_install %w(git sudo curl apt-transport-https ca-certificates lsb-release build-essential)
+      apt_get_install(host, %w(git sudo curl apt-transport-https ca-certificates lsb-release build-essential))
+    else
+      raise "Bug"
+    end
+  end
+
+  on roles(:db) do |host|
+    case host.properties.fetch(:os_class)
+    when :redhat
+      execute "yum install -y sudo"
+    when :debian
+      apt_get_install(host, %w(sudo apt-transport-https ca-certificates lsb-release))
     else
       raise "Bug"
     end
@@ -108,6 +119,7 @@ def install_language_runtime
     when 'rvm'
       install_rvm
     end
+    install_common_ruby_app_dependencies
   end
 end
 
@@ -119,16 +131,49 @@ def install_rvm
   end
 end
 
+def install_common_ruby_app_dependencies
+  if CONFIG['install_common_ruby_app_dependencies']
+    on roles(:app) do |host|
+      case host.properties.fetch(:os_class)
+      when :redhat
+        raise "TODO"
+      when :debian
+        packages = []
+        # For Rails.
+        packages.concat %w(nodejs)
+        # For Nokogiri.
+        packages.concat %w(libxml2-dev libxslt1-dev)
+        # For rmagick and minimagick.
+        packages.concat %w(imagemagick libmagickwand-dev)
+        # For mysql and mysql2.
+        packages.concat %w(libmysqlclient-dev)
+        # For sqlite3.
+        packages.concat %w(libsqlite3-dev)
+        # For postgres and pg.
+        packages.concat %w(libpq-dev)
+        # For capybara-webkit.
+        packages.concat %w(libqt4-webkit libqt4-dev)
+        # For curb.
+        packages.concat %w(libcurl4-openssl-dev)
+
+        apt_get_install(host, packages)
+      else
+        raise "Bug"
+      end
+    end
+  end
+end
+
 def install_passenger_and_web_server
-  on roles(:app) do
-    case SYSINFO[:os_class]
+  on roles(:app) do |host|
+    case host.properties.fetch(:os_class)
     when :redhat
       install_passenger_from_source
       install_web_server_with_passenger_from_source
     when :debian
       codename = capture(b "lsb_release -c | awk '{ print $2 }'").strip
       if passenger_apt_repo_available?(codename)
-        install_passenger_and_web_server_from_apt(codename)
+        install_passenger_and_web_server_from_apt(host, codename)
       else
         install_passenger_from_source
         install_web_server_with_passenger_from_source
@@ -139,7 +184,7 @@ def install_passenger_and_web_server
   end
 end
 
-def install_passenger_and_web_server_from_apt(codename)
+def install_passenger_and_web_server_from_apt(host, codename)
   if !test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
     config = StringIO.new
     if CONFIG['passenger_enterprise']
@@ -151,14 +196,14 @@ def install_passenger_and_web_server_from_apt(codename)
     config.rewind
     upload! config, "/etc/apt/sources.list.d/passenger.list"
     execute "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7"
-    apt_get_update
+    apt_get_update(host)
   end
   execute "chmod 600 /etc/apt/sources.list.d/passenger.list"
 
-  if CONFIG['setup_web_server']
+  if CONFIG['install_web_server']
     case CONFIG['web_server_type']
     when 'nginx'
-      apt_get_install %w(nginx-extras passenger)
+      apt_get_install(host, %w(nginx-extras passenger))
       md5 = capture("md5sum /etc/nginx/nginx.conf")
       execute "sed -i 's|# passenger_root|passenger_root|' /etc/nginx/nginx.conf"
       execute "sed -i 's|# passenger_ruby|passenger_ruby|' /etc/nginx/nginx.conf"
@@ -168,7 +213,7 @@ def install_passenger_and_web_server_from_apt(codename)
         execute "service nginx restart"
       end
     when 'apache'
-      apt_get_install "libapache2-mod-passenger"
+      apt_get_install(host, "libapache2-mod-passenger")
       if !test("[[ -e /etc/apache2/mods-enabled/passenger.load ]]")
         execute "a2enmod passenger && service apache2 restart"
       end
@@ -220,8 +265,8 @@ def create_app_dir(path, owner)
 end
 
 def install_dbms(type)
-  on roles(:app) do
-    case SYSINFO[:os_class]
+  on roles(:db) do |host|
+    case host.properties.fetch(:os_class)
     when :redhat
       case type
       when 'postgresql'
@@ -232,7 +277,28 @@ def install_dbms(type)
     when :debian
       case type
       when 'postgresql'
-        apt_get_install %w(postgresql postgresql-client libpq-dev)
+        apt_get_install(host, %w(postgresql postgresql-client))
+      else
+        abort "Unsupported database type. Only PostgreSQL is supported."
+      end
+    else
+      raise "Bug"
+    end
+  end
+
+  on roles(:app) do |host|
+    case host.properties.fetch(:os_class)
+    when :redhat
+      case type
+      when 'postgresql'
+        raise "TODO"
+      else
+        abort "Unsupported database type. Only PostgreSQL is supported."
+      end
+    when :debian
+      case type
+      when 'postgresql'
+        apt_get_install(host, %w(libpq-dev))
       else
         abort "Unsupported database type. Only PostgreSQL is supported."
       end
@@ -243,7 +309,7 @@ def install_dbms(type)
 end
 
 def setup_database(type, name, user)
-  on roles(:app) do
+  on roles(:db) do
     case type
     when 'postgresql'
       user_test_script = "cd / && sudo -u postgres -H psql postgres -tAc " +
@@ -321,6 +387,9 @@ def install_flippo_manifest(name, app_dir)
       "cd /etc/flippo/apps && " +
       "rm -f #{name} && " +
       "ln -s #{app_dir} #{name}"
+  end
+
+  on roles(:app, :db) do
     execute "mkdir -p /etc/flippo/setup && " +
       "cd /etc/flippo/setup && " +
       "date +%s > last_run_time && " +
