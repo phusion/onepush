@@ -9,7 +9,7 @@ if ARGV[0] == "setup"
   exec("bundle", "exec", "cap", "vagrant", "setup", "CONFIG_FILE=#{PWD}/flippo.json")
 elsif ARGV[0] == "deploy"
   Dir.chdir("#{ROOT}/deploy_ruby")
-  exec("bundle", "exec", "cap", "vagrant", "deploy", "CONFIG_FILE=#{PWD}/flippo.json")
+  exec("bundle", "exec", "cap", "vagrant", "deploy", "APP_ROOT=#{PWD}", "CONFIG_FILE=#{PWD}/flippo.json")
 else
   abort "Unknown command"
 end

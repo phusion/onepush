@@ -60,6 +60,13 @@ def sudo_capture(host, command)
   capture(wrap_in_sudo(host, command))
 end
 
+def sudo_upload(host, io, path)
+  mktempdir(host) do |tmpdir|
+    upload!(io, "#{tmpdir}/file")
+    sudo(host, "chown root: #{tmpdir}/file && mv #{tmpdir}/file #{path}")
+  end
+end
+
 def wrap_in_sudo(host, command)
   if host.user == 'root'
     b(command)
@@ -99,10 +106,14 @@ def mktempdir(host)
   end
 end
 
-def sudo_upload(host, io, path)
-  mktempdir(host) do |tmpdir|
-    upload!(io, "#{tmpdir}/file")
-    sudo(host, "chown root: #{tmpdir}/file && mv #{tmpdir}/file #{path}")
+def create_user(host, name)
+  case host.properties.fetch(:os_class)
+  when :redhat
+    sudo(host, "adduser #{name} && usermod -L #{name}")
+  when :debian
+    sudo(host, "adduser --disabled-password --gecos #{name} #{name}")
+  else
+    raise "Bug"
   end
 end
 

@@ -1,11 +1,12 @@
-set :application, 'my_app_name'
+set :application, CONFIG['name']
+set :deploy_to, CONFIG['app_dir']
 set :repo_url, CONFIG['app_dir'] + '/flippo_repo'
+if CONFIG['ruby_version']
+  set :rvm_ruby_version, CONFIG['ruby_version']
+end
 
 # Default branch is :master
 # ask :branch, proc { `git rev-parse --abbrev-ref HEAD`.chomp }.call
-
-# Default deploy_to directory is /var/www/my_app
-# set :deploy_to, '/var/www/my_app'
 
 # Default value for :scm is :git
 # set :scm, :git
@@ -51,25 +52,48 @@ namespace :deploy do
 
   desc 'Push code to app servers'
   task :push_code do
-    run_locally do
-      revision=`git rev-parse --abbrev-ref HEAD`.strip
-      repo_path = CONFIG['app_dir'] + '/flippo_repo'
-      # also set key etc
-      #execute "git push #{server_address}:#{repo_path} #{revision}:master"
-    end
-  end
+    revision  = `git rev-parse --abbrev-ref HEAD`.strip
+    repo_path = fetch(:repo_url)
 
-  task :check_server_setup do
-    on roles(:app) do
-      name = CONFIG['name']
-      if !test("-h /etc/flippo/apps/#{name}")
-        fatal_and_abort "The server isn't correctly setup yet. Please run 'flippo setup'."
+    on roles(:app, :in => :sequence) do |host|
+      Dir.mktmpdir do |tmpdir|
+        File.open("#{tmpdir}/ssh_wrapper", "w") do |f|
+          f.puts "#!/bin/sh"
+          f.write "exec ssh "
+          if host.netssh_options[:forward_agent]
+            f.write "-A "
+          end
+          if host.netssh_options[:keys]
+            host.netssh_options[:keys].each do |key|
+              f.write "-i #{Shellwords.escape(File.absolute_path(key))} "
+            end
+          end
+          f.write "\"$@\"\n"
+        end
+
+        ssh_wrapper = "#{tmpdir}/ssh_wrapper"
+        File.chmod(0700, ssh_wrapper)
+
+        git_host = "ssh://"
+        if host.user
+          git_host << "#{host.user}@"
+        end
+        git_host << host.hostname
+        if host.port
+          git_host << ":#{host.port}"
+        else
+          git_host << ":"
+        end
+
+        run_locally do
+          execute "env GIT_SSH=#{Shellwords.escape ssh_wrapper} " +
+            "git push #{git_host}#{repo_path} #{revision}:master -f"
+        end
       end
     end
   end
 
   before :starting, :push_code
-  before :starting, :check_server_setup
 
   desc 'Restart application'
   task :restart do

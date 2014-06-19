@@ -33,6 +33,11 @@ def install_rvm(host)
       sudo(host, "/bin/bash -lc 'rvm --default #{rubies.last}'")
     end
   end
+
+  ruby_version = CONFIG['ruby_version']
+  if ruby_version && !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
+    sudo(host, "/usr/local/rvm/bin/rvm install #{ruby_version}")
+  end
 end
 
 def install_common_ruby_app_dependencies
@@ -57,7 +62,7 @@ def install_common_ruby_app_dependencies
         # TODO: check whether package name has changed in Red Hat 7
         packages.concat %w(qt-devel)
         # For curb.
-        packages.concat %w(curl-devel)
+        packages.concat %w(libcurl-devel)
 
         yum_install(host, packages)
       when :debian
