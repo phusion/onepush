@@ -80,6 +80,7 @@ task :setup do
   create_app_database_config(CONFIG['app_dir'], CONFIG['user'],
     CONFIG['database_type'], CONFIG['database_name'],
     CONFIG['database_user'])
+  invoke :create_app_vhost
   invoke :install_flippo_manifest
   invoke :restart_services
 end

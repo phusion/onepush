@@ -4,6 +4,7 @@ task :install_web_server => [:install_essentials, :install_passenger] do
     when 'nginx'
       install_nginx
       enable_passenger_nginx
+      install_flippo_nginx_vhosts
       install_nginx_service
     when 'apache'
       install_apache
@@ -79,25 +80,51 @@ def enable_passenger_nginx
         passenger_root = capture("#{passenger_config} --root").strip
 
         io = StringIO.new
-        download!(config_file, io)
+        sudo_download(host, config_file, io)
 
         config = io.string
         modified = config.sub!(/^http {/,
-            "http {\n" +
-            "    passenger_root #{passenger_root};\n" +
-            "    passenger_ruby #{ruby};\n")
+          "http {\n" +
+          "    passenger_root #{passenger_root};\n" +
+          "    passenger_ruby #{ruby};\n")
 
         if modified
           io = StringIO.new
           io.puts(config)
           io.rewind
-          upload!(io, config_file)
+          sudo_upload(host, io, config_file)
           sudo(host, "touch /var/run/flippo/restart_web_server")
         else
           fatal_and_abort "Unable to modify the Nginx configuration file to enable Phusion Passenger. " +
             "Please do it manually: add the `passenger_root` and `passenger_ruby` directives to " +
             "#{config_file}, inside the `http` block."
         end
+      end
+    end
+  end
+end
+
+def install_flippo_nginx_vhosts
+  if CONFIG['install_web_server']
+    on roles(:app) do |host|
+      config_file = autodetect_nginx!(host)[:config_file]
+      include_directive = "include /etc/flippo/apps/*/shared/config/nginx/vhost.conf;"
+
+      io = StringIO.new
+      sudo_download(host, config_file, io)
+
+      config = io.string
+      if !config.include?(include_directive)
+        modified = config.sub!(/^http {/,
+          "http {\n" +
+          "    #{include_directive}\n")
+      end
+      if modified
+        io = StringIO.new
+          io.puts(config)
+          io.rewind
+          sudo_upload(host, io, config_file)
+          sudo(host, "touch /var/run/flippo/restart_web_server")
       end
     end
   end

@@ -77,6 +77,7 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
   on roles(:app) do
     if !test("[[ -e #{app_dir}/shared/config/database.yml ]]")
       config = StringIO.new
+      conifg.puts "# Installed by Flippo."
       config.puts "default_settings: &default_settings"
       case db_type
       when 'postgresql'
@@ -84,7 +85,6 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
       else
         abort "Unsupported database type . Only PostgreSQL is supported."
       end
-      config.puts "  host: localhost"
       config.puts "  database: #{db_name}"
       config.puts "  username: #{db_user}"
       config.puts "  encoding: utf-8"
@@ -101,6 +101,7 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
 
     if !test("[[ -e #{app_dir}/shared/config/secrets.yml ]]")
       config = StringIO.new
+      conifg.puts "# Installed by Flippo."
       config.puts "default_settings: &default_settings"
       config.puts "  secret_key_base: #{SecureRandom.hex(64)}"
       config.puts

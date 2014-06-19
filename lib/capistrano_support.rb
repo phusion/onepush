@@ -37,7 +37,7 @@ end
 
 
 def check_config_requirements(config)
-  ['name', 'type'].each do |key|
+  ['name', 'type', 'domain_names'].each do |key|
     if !config[key]
       fatal_and_abort("The '#{key}' option must be set")
     end
@@ -58,6 +58,10 @@ end
 
 def sudo_capture(host, command)
   capture(wrap_in_sudo(host, command))
+end
+
+def sudo_download(host, path, io)
+  io.write(sudo_capture(host, "cat #{path}"))
 end
 
 def sudo_upload(host, io, path)
@@ -285,6 +289,14 @@ def autodetect_ruby_interpreter_for_passenger!(host)
   autodetect_ruby_interpreter_for_passenger(host) || \
     fatal_and_abort("Unable to find a Ruby interpreter on the system. This is probably " +
       "a bug in Flippo. Please report this to the authors.")
+end
+
+
+def check_file_change(host, path)
+  md5_old = sudo_capture(host, "md5sum #{path} 2>/dev/null; true").strip
+  yield
+  md5_new = sudo_capture(host, "md5sum #{path}").strip
+  md5_old != md5_new
 end
 
 
