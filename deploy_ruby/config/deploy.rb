@@ -1,10 +1,3 @@
-set :application, CONFIG['name']
-set :deploy_to, CONFIG['app_dir']
-set :repo_url, CONFIG['app_dir'] + '/flippo_repo'
-if CONFIG['ruby_version']
-  set :rvm_ruby_version, CONFIG['ruby_version']
-end
-
 # Default branch is :master
 # ask :branch, proc { `git rev-parse --abbrev-ref HEAD`.chomp }.call
 
@@ -47,6 +40,24 @@ namespace :deploy do
           end
         end
       end
+    end
+  end
+
+  desc 'Sanity check codebase'
+  task :check_codebase do
+    gemfile_lock = `git show HEAD:Gemfile.lock`
+    config = fetch(:flippo_setup)
+
+    case config['database_type']
+    when 'postgresql'
+      if gemfile_lock !~ / pg /
+        fatal_and_abort "Flippo uses PostgreSQL as database. However, your " +
+          "app does not include the PostgreSQL driver. Please add this to your Gemfile:\n" +
+          "  gem 'pg'\n\n" +
+          "Then run 'bundle install', then run 'flippo deploy' again."
+      end
+    else
+      fatal_and_abort "Unsupported database type. Only PostgreSQL is supported."
     end
   end
 
@@ -93,6 +104,7 @@ namespace :deploy do
     end
   end
 
+  before :starting, :check_codebase
   before :starting, :push_code
 
   desc 'Restart application'

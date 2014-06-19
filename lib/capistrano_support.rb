@@ -286,3 +286,33 @@ def autodetect_ruby_interpreter_for_passenger!(host)
     fatal_and_abort("Unable to find a Ruby interpreter on the system. This is probably " +
       "a bug in Flippo. Please report this to the authors.")
 end
+
+
+def _check_server_setup(host)
+  name = CONFIG['name']
+
+  set :application, CONFIG['name']
+
+  app_dir = capture("readlink /etc/flippo/apps/#{name}; true").strip
+  if app_dir.empty?
+    fatal_and_abort "The server has not been setup for your app yet. Please run 'flippo setup'."
+  end
+  set(:deploy_to, app_dir)
+  set(:repo_url, "#{app_dir}/flippo_repo")
+
+  io = StringIO.new
+  download!("#{app_dir}/flippo-setup.json", io)
+  config = JSON.parse(io.string)
+  set(:flippo_setup, config)
+
+  if config['ruby_version']
+    set :rvm_ruby_version, config['ruby_version']
+  end
+
+  invoke 'rvm:hook'
+  rvm_path = fetch(:rvm_path)
+  ruby_version = fetch(:rvm_ruby_version)
+  if !test("#{rvm_path}/bin/rvm #{ruby_version} do ruby --version")
+    fatal_and_abort "Your app requires #{ruby_version}, but it isn't installed yet. Please run 'flippo setup'."
+  end
+end
