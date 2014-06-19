@@ -23,7 +23,7 @@ task :install_flippo_manifest => :install_essentials do
   config.rewind
 
   on roles(:app) do |host|
-    sudo_upload(config, "#{app_dir}/flippo-setup.json")
+    sudo_upload(host, config, "#{app_dir}/flippo-setup.json")
     sudo(host, "chown root: #{app_dir}/flippo-setup.json && " +
       "chmod 600 #{app_dir}/flippo-setup.json")
     sudo(host, "mkdir -p /etc/flippo/apps && " +

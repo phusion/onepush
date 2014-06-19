@@ -75,7 +75,7 @@ def enable_passenger_nginx
       sudo(host, "sed -i 's|# passenger_root|passenger_root|' #{config_file}")
       sudo(host, "sed -i 's|# passenger_ruby|passenger_ruby|' #{config_file}")
 
-      if !test("grep -q passenger_root #{config_file}")
+      if !sudo_test(host, "grep -q passenger_root #{config_file}")
         passenger_root = capture("#{passenger_config} --root").strip
 
         io = StringIO.new
@@ -119,7 +119,7 @@ def install_nginx_service
         raise "Bug"
       end
 
-      if !test("grep -q '^daemon ' #{config_file}")
+      if !sudo_test(host, "grep -q '^daemon ' #{config_file}")
         info "Disabling daemon mode in #{config_file}"
         io = StringIO.new
         download!(config_file, io)
@@ -129,8 +129,8 @@ def install_nginx_service
         config.puts(io.string)
         config.rewind
 
-        upload!(config, "/opt/nginx/conf/nginx.conf")
-      elsif test("grep '^daemon on;' /opt/nginx/conf/nginx.conf")
+        sudo_upload(host, config, "/opt/nginx/conf/nginx.conf")
+      elsif sudo_test(host, "grep '^daemon on;' /opt/nginx/conf/nginx.conf")
         info "Disabling daemon mode in /opt/nginx/conf/nginx.conf"
         io = StringIO.new
         download!("/opt/nginx/conf/nginx.conf", io)
@@ -139,7 +139,7 @@ def install_nginx_service
         config.puts(io.string.sub(/^daemon on;/, 'daemon off;'))
         config.rewind
 
-        upload!(config, "/opt/nginx/conf/nginx.conf")
+        sudo_upload(host, config, "/opt/nginx/conf/nginx.conf")
       end
 
       if !test("[[ -e /etc/service/nginx/run ]]")
@@ -152,7 +152,7 @@ def install_nginx_service
         script.rewind
 
         sudo(host, "mkdir -p /etc/service/nginx")
-        upload!(script, "/etc/service/nginx/run.new")
+        sudo_upload(host, script, "/etc/service/nginx/run.new")
         sudo(host, "chmod +x /etc/service/nginx/run.new && mv /etc/service/nginx/run.new /etc/service/nginx/run")
         # Wait for Runit to pick up this new service.
         sleep 1

@@ -134,7 +134,7 @@ def _install_passenger_source_dependencies(host)
 
   case host.properties.fetch(:os_class)
   when :redhat
-    yum_install(host, %w(curl-devel openssl-devel zlib-devel))
+    yum_install(host, %w(libcurl-devel openssl-devel zlib-devel))
   when :debian
     apt_get_install(host, %w(libcurl4-openssl-dev libssl-dev zlib1g-dev))
   else

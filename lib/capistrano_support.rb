@@ -49,8 +49,20 @@ end
 
 
 def sudo(host, command)
+  execute(wrap_in_sudo(host, command))
+end
+
+def sudo_test(host, command)
+  test(wrap_in_sudo(host, command))
+end
+
+def sudo_capture(host, command)
+  capture(wrap_in_sudo(host, command))
+end
+
+def wrap_in_sudo(host, command)
   if host.user == 'root'
-    execute(b command)
+    b(command)
   else
     if !host.properties.fetch(:sudo_checked)
       if test("[[ -e /usr/bin/sudo ]]")
@@ -69,7 +81,7 @@ def sudo(host, command)
         fatal_and_abort "Flippo requires 'sudo' to be installed on the server. Please install it first."
       end
     end
-    execute("/usr/bin/sudo -k -n -H #{b command}")
+    "/usr/bin/sudo -k -n -H #{b command}"
   end
 end
 

@@ -102,13 +102,6 @@ task :autodetect_os do
 end
 
 task :install_essentials => :autodetect_os do
-  on roles(:app, :db) do |host|
-    sudo(host, "mkdir -p /var/run/flippo && chmod 700 /var/run/flippo")
-    if host.properties.fetch(:os_class) == :redhat
-      enable_epel(host)
-    end
-  end
-
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
@@ -128,6 +121,14 @@ task :install_essentials => :autodetect_os do
       apt_get_install(host, %w(sudo apt-transport-https ca-certificates lsb-release))
     else
       raise "Bug"
+    end
+  end
+
+  on roles(:app, :db) do |host|
+    sudo(host, "mkdir -p /var/run/flippo && chmod 700 /var/run/flippo")
+    if host.properties.fetch(:os_class) == :redhat
+      enable_epel(host)
+      enable_phusion_runit_yum_repo(host)
     end
   end
 end
@@ -169,5 +170,25 @@ def enable_epel(host)
     io.rewind
     sudo_upload(host, io, "/etc/yum.repos.d/epel.repo")
     sudo(host, "chmod 644 /etc/yum.repos.d/epel.repo")
+  end
+end
+
+def enable_phusion_runit_yum_repo(host)
+  if !test("[[ -e /etc/yum.repos.d/phusion-runit.repo ]]")
+    case host.properties.fetch(:normalized_arch)
+    when "x86"
+      epel_arch = "i386"
+    when "x86_64"
+      epel_arch = "x86_64"
+    end
+
+    if host.properties.fetch(:os) == :amazon_linux
+      name = "amazon"
+    else
+      name = "el"
+    end
+
+    notice "Installing Phusion Runit repo"
+    sudo(host, "curl --fail -L -o /etc/yum.repos.d/phusion-runit.repo https://oss-binaries.phusionpassenger.com/yumgems/phusion-runit/#{name}.repo")
   end
 end

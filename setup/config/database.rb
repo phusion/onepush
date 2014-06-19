@@ -7,6 +7,15 @@ task :install_dbms => :install_essentials do
       case type
       when 'postgresql'
         yum_install(host, %w(postgresql postgresql-server))
+        files = sudo_capture(host, "ls -1 /var/lib/pgsql/data")
+        if files.empty?
+          sudo(host, "service postgresql initdb")
+        end
+        if !sudo_test(host, "service postgresql status")
+          sudo(host, "service postgresql start")
+          # Wait for PostgreSQL to start.
+          sleep 1
+        end
       else
         abort "Unsupported database type. Only PostgreSQL is supported."
       end
@@ -51,7 +60,7 @@ def setup_database(type, name, user)
       user_test_script = "cd / && sudo -u postgres -H psql postgres -tAc " +
         "\"SELECT 1 FROM pg_roles WHERE rolname='#{user}'\" | grep -q 1"
       if !test(b user_test_script)
-        sudo(host, "cd / && sudo -u postgres -H createuser --no-password #{user}")
+        sudo(host, "cd / && sudo -u postgres -H createuser --no-password -SDR #{user}")
       end
 
       databases = capture(b "cd / && sudo -u postgres -H psql postgres -lqt | cut -d \\| -f 1")
@@ -87,7 +96,7 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
         config.puts
       end
       config.rewind
-      upload! config, "#{app_dir}/shared/config/database.yml"
+      sudo_upload(host, config, "#{app_dir}/shared/config/database.yml")
     end
 
     if !test("[[ -e #{app_dir}/shared/config/secrets.yml ]]")
@@ -101,7 +110,7 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
         config.puts
       end
       config.rewind
-      upload! config, "#{app_dir}/shared/config/secrets.yml"
+      sudo_upload(host, config, "#{app_dir}/shared/config/secrets.yml")
     end
 
     sudo(host, "cd #{app_dir}/shared/config && " +
