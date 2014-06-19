@@ -49,25 +49,18 @@ def should_install_nginx_from_phusion_apt?
 end
 
 def install_nginx_from_phusion_apt(host)
-  case host.properties.fetch(:os_class)
-  when :redhat
-    raise "TODO"
-  when :debian
-    if test("test -e /usr/bin/nginx && ! /usr/bin/nginx -V | grep -q passenger")
-      # Remove upstream Nginx package, which does not include Phusion Passenger.
-      sudo(host, "apt-get remove -y nginx nginx-core nginx-light nginx-full nginx-extras nginx-naxsi")
-    end
-    apt_get_install(host, %w(nginx-extras))
-  else
-    raise "Bug"
+  if test("test -e /usr/bin/nginx && ! /usr/bin/nginx -V | grep -q passenger")
+    # Remove upstream Nginx package, which does not include Phusion Passenger.
+    sudo(host, "apt-get remove -y nginx nginx-core nginx-light nginx-full nginx-extras nginx-naxsi")
   end
+  apt_get_install(host, %w(nginx-extras))
 
   sudo(host, "touch /var/run/flippo/restart_web_server")
 end
 
 def install_nginx_from_source_with_passenger(host)
   installer = autodetect_passenger!(host)[:nginx_installer]
-  invoke :install_passenger_source_dependencies
+  _install_passenger_source_dependencies(host)
   sudo(host, "#{installer} --auto --auto-download --prefix=/opt/nginx --languages=")
 end
 
@@ -173,7 +166,7 @@ def install_apache
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
-      raise "TODO"
+      yum_install(host, %w(httpd))
     when :debian
       apt_get_install(host, %w(apache2))
     else
@@ -190,7 +183,7 @@ def install_passenger_apache_module
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
-      raise "TODO"
+      install_passenger_apache_module_from_source(host)
     when :debian
       if should_install_passenger_apache_module_from_apt?
         install_passenger_apache_module_from_apt(host)
@@ -215,7 +208,7 @@ def install_passenger_apache_module_from_apt(host)
 end
 
 def install_passenger_apache_module_from_source(host)
-  invoke :install_passenger_source_dependencies
+  _install_passenger_source_dependencies(host)
   passenger_info   = autodetect_passenger!(host)
   passenger_config = passenger_info[:config_command]
   installer        = passenger_info[:apache2_installer]
@@ -229,7 +222,7 @@ def install_passenger_apache_module_from_source(host)
     # Install dependencies.
     case host.properties.fetch(:os_class)
     when :redhat
-      raise "TODO"
+      yum_install(host, %w(httpd-devel))
     when :debian
       apt_get_install(host, %w(apache2-dev))
     else

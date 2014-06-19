@@ -6,7 +6,7 @@ task :install_dbms => :install_essentials do
     when :redhat
       case type
       when 'postgresql'
-        raise "TODO"
+        yum_install(host, %w(postgresql postgresql-server))
       else
         abort "Unsupported database type. Only PostgreSQL is supported."
       end
@@ -27,14 +27,14 @@ task :install_dbms => :install_essentials do
     when :redhat
       case type
       when 'postgresql'
-        raise "TODO"
+        yum_install(host, %w(postgresql postgresql-devel))
       else
         abort "Unsupported database type. Only PostgreSQL is supported."
       end
     when :debian
       case type
       when 'postgresql'
-        apt_get_install(host, %w(libpq-dev))
+        apt_get_install(host, %w(postgresql-client libpq-dev))
       else
         abort "Unsupported database type. Only PostgreSQL is supported."
       end
@@ -45,18 +45,18 @@ task :install_dbms => :install_essentials do
 end
 
 def setup_database(type, name, user)
-  on roles(:db) do
+  on roles(:db) do |host|
     case type
     when 'postgresql'
       user_test_script = "cd / && sudo -u postgres -H psql postgres -tAc " +
         "\"SELECT 1 FROM pg_roles WHERE rolname='#{user}'\" | grep -q 1"
       if !test(b user_test_script)
-        execute("cd / && sudo -u postgres -H createuser --no-password #{user}")
+        sudo(host, "cd / && sudo -u postgres -H createuser --no-password #{user}")
       end
 
       databases = capture(b "cd / && sudo -u postgres -H psql postgres -lqt | cut -d \\| -f 1")
       if databases !~ /^ *#{Regexp.escape name} *$/
-        execute("cd / && sudo -u postgres -H createdb --no-password --owner #{user} #{name}")
+        sudo(host, "cd / && sudo -u postgres -H createdb --no-password --owner #{user} #{name}")
       end
     else
       abort "Unsupported database type. Only PostgreSQL is supported."
@@ -104,8 +104,8 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
       upload! config, "#{app_dir}/shared/config/secrets.yml"
     end
 
-    execute "cd #{app_dir}/shared/config && " +
+    sudo(host, "cd #{app_dir}/shared/config && " +
       "chmod 600 database.yml secrets.yml && " +
-      "chown #{owner}: database.yml secrets.yml"
+      "chown #{owner}: database.yml secrets.yml")
   end
 end

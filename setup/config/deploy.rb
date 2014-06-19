@@ -42,27 +42,24 @@ end
 
 task :restart_services => :install_essentials do
   on roles(:app) do |host|
-    case host.properties.fetch(:os_class)
-    when :redhat
-      raise "TODO"
-    when :debian
-      if test("sudo test -e /var/run/flippo/restart_web_server")
-        sudo(host, "rm -f /var/run/flippo/restart_web_server")
-        case CONFIG['web_server_type']
-        when 'nginx'
-          if test("[[ -e /etc/init.d/nginx ]]")
-            sudo(host, "/etc/init.d/nginx restart")
-          elsif test("[[ -e /etc/service/nginx ]]")
-            sudo(host, "sv restart /etc/service/nginx")
-          end
-        when 'apache'
-          sudo(host, "service apache2 restart")
-        else
-          abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
+    if test("sudo test -e /var/run/flippo/restart_web_server")
+      sudo(host, "rm -f /var/run/flippo/restart_web_server")
+      case CONFIG['web_server_type']
+      when 'nginx'
+        if test("[[ -e /etc/init.d/nginx ]]")
+          sudo(host, "/etc/init.d/nginx restart")
+        elsif test("[[ -e /etc/service/nginx ]]")
+          sudo(host, "sv restart /etc/service/nginx")
         end
+      when 'apache'
+        if test("[[ -e /etc/init.d/apache2 ]]")
+          sudo(host, "/etc/init.d/apache2 restart")
+        elsif test("[[ -e /etc/init.d/httpd ]]")
+          sudo(host, "/etc/init.d/httpd restart")
+        end
+      else
+        abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
       end
-    else
-      raise "Bug"
     end
   end
 end

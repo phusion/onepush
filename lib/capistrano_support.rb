@@ -231,13 +231,29 @@ end
 
 def autodetect_ruby_interpreter_for_passenger(host)
   cache(host, :ruby) do
-    if test("[[ -e /usr/bin/ruby ]]")
-      "/usr/bin/ruby"
-    elsif test("[[ -e /usr/local/rvm/wrappers/default/ruby ]]")
-      "/usr/local/rvm/wrappers/default/ruby"
+    if CONFIG['type'] == 'ruby'
+      # Since install_passenger_source_dependencies installs RVM
+      # if the language is Ruby (and thus, does not install Rake
+      # through the OS package manager), we must give RVM precedence
+      # here.
+      possibilities = [
+        "/usr/local/rvm/wrappers/default/ruby",
+        "/usr/bin/ruby"
+      ]
     else
-      nil
+      possibilities = [
+        "/usr/bin/ruby",
+        "/usr/local/rvm/wrappers/default/ruby"
+      ]
     end
+    result = nil
+    possibilities.each do |possibility|
+      if test("[[ -e #{possibility} ]]")
+        result = possibility
+        break
+      end
+    end
+    result
   end
 end
 

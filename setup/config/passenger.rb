@@ -30,9 +30,8 @@ end
 
 def check_passenger_version_supported(host)
   passenger_info = autodetect_passenger!(host)
-  p passenger_info
   version = capture("#{passenger_info[:config_command]} --version").strip
-  if version < "4.0.45"
+  if Gem::Version.new(version) < Gem::Version.new("4.0.45")
     fatal_and_abort "Your server already has Phusion Passenger version #{version} " +
       "installed. Flippo requires Passenger 4.0.45 or later, but it currently " +
       "does not support automatically upgrading Passenger. There are two things you can do:\n\n" +
@@ -81,7 +80,7 @@ def install_passenger_from_apt(host, codename)
 end
 
 def install_passenger_from_source(host)
-  invoke :install_passenger_source_dependencies
+  _install_passenger_source_dependencies(host)
 
   # Install Passenger.
   if !test("[[ -e /opt/passenger/current ]]")
@@ -109,33 +108,37 @@ end
 
 task :install_passenger_source_dependencies => :install_essentials do
   on roles(:app) do |host|
-    # Install a Ruby runtime for Passenger.
-    if CONFIG['type'] == 'ruby'
-      invoke :install_ruby_runtime
-      # TODO: install Rake for this particular Ruby
-    else
-      # If the app language is not Ruby, we don't want to install a full-blown
-      # Ruby runtime for apps. We just want to install a minimalist Ruby just to
-      # be able to run Passenger.
-      case host.properties.fetch(:os_class)
-      when :redhat
-        yum_install(host, %w(ruby rubygem-rake))
-      when :debian
-        apt_get_install(host, %w(ruby ruby-dev rake))
-      else
-        raise "Bug"
-      end
-      clear_cache(:ruby)
-    end
+    _install_passenger_source_dependencies(host)
+  end
+end
 
+def _install_passenger_source_dependencies(host)
+  # Install a Ruby runtime for Passenger.
+  if CONFIG['type'] == 'ruby'
+    # This also ensures that Rake is installed.
+    _install_ruby_runtime(host)
+  else
+    # If the app language is not Ruby, we don't want to install a full-blown
+    # Ruby runtime for apps. We just want to install a minimalist Ruby just to
+    # be able to run Passenger.
     case host.properties.fetch(:os_class)
     when :redhat
-      yum_install(host, %w(curl-devel openssl-devel zlib-devel))
+      yum_install(host, %w(ruby rubygem-rake))
     when :debian
-      apt_get_install(host, %w(libcurl4-openssl-dev libssl-dev zlib1g-dev))
+      apt_get_install(host, %w(ruby ruby-dev rake))
     else
       raise "Bug"
     end
+    clear_cache(host, :ruby)
+  end
+
+  case host.properties.fetch(:os_class)
+  when :redhat
+    yum_install(host, %w(curl-devel openssl-devel zlib-devel))
+  when :debian
+    apt_get_install(host, %w(libcurl4-openssl-dev libssl-dev zlib1g-dev))
+  else
+    raise "Bug"
   end
 end
 
