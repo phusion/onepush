@@ -48,15 +48,71 @@ def check_config_requirements(config)
 end
 
 
+def sudo(host, command)
+  if host.user == 'root'
+    execute(b command)
+  else
+    if !host.properties.fetch(:sudo_checked)
+      if test("[[ -e /usr/bin/sudo ]]")
+        if !test("/usr/bin/sudo -k -n true")
+          fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, Flippo " +
+            "needs sudo to *not* ask for a password. Please *temporarily* configure " +
+            "sudo to allow the '#{host.user}' user to run it without a password.\n\n" +
+            "Open the sudo configuration file:\n" +
+            "  sudo visudo\n\n" +
+            "Then insert:\n" +
+            "  # Remove this entry later. Flippo only needs it temporarily.\n" +
+            "  #{host.user} ALL=(ALL) NOPASSWD: ALL"
+        end
+        host.properties.set(:sudo_checked, true)
+      else
+        fatal_and_abort "Flippo requires 'sudo' to be installed on the server. Please install it first."
+      end
+    end
+    execute("/usr/bin/sudo -k -n -H #{b command}")
+  end
+end
+
 def b(script)
   full_script = "set -o pipefail && #{script}"
   "/bin/bash -c #{Shellwords.escape(full_script)}"
 end
 
+def mktempdir(host)
+  tmpdir = capture("mktemp -d /tmp/flippo.XXXXXXXX").strip
+  begin
+    yield tmpdir
+  ensure
+    sudo(host, "rm -rf #{tmpdir}")
+  end
+end
+
+def sudo_upload(host, io, path)
+  mktempdir(host) do |tmpdir|
+    upload!(io, "#{tmpdir}/file")
+    sudo(host, "chown root: #{tmpdir}/file && mv #{tmpdir}/file #{path}")
+  end
+end
+
+
+def cache(host, name)
+  if result = host.properties.fetch("cache_#{name}")
+    result[0]
+  else
+    result = [yield]
+    host.properties.set("cache_#{name}", result)
+    result[0]
+  end
+end
+
+def clear_cache(host, name)
+  host.properties.set("cache_#{name}", nil)
+end
+
 
 def apt_get_update(host)
-  execute "apt-get update && touch /var/lib/apt/periodic/update-success-stamp"
-  host.add_property(:apt_get_updated, true)
+  sudo(host, "apt-get update && touch /var/lib/apt/periodic/update-success-stamp")
+  host.properties.set(:apt_get_updated, true)
 end
 
 def apt_get_install(host, packages)
@@ -73,30 +129,38 @@ def apt_get_install(host, packages)
         apt_get_update(host)
       end
     end
-    execute "apt-get install -y #{packages.join(' ')}"
+    sudo(host, "apt-get install -y #{packages.join(' ')}")
   end
   packages.size
 end
 
 def yum_install(host, packages)
-  execute "yum install -y #{packages.join(' ')}"
+  packages = filter_non_installed_packages(host, packages)
+  if !packages.empty?
+    sudo(host, "yum install -y #{packages.join(' ')}")
+  end
+  packages.size
 end
 
 def check_packages_installed(host, names)
+  result = {}
   case host.properties.fetch(:os_class)
   when :redhat
-    raise "TODO"
+    installed = capture("rpm -q #{names.join(' ')} 2>&1 | grep 'is not installed$'; true")
+    not_installed = installed.split("\n").map { |x| x.sub(/^package (.+) is not installed$/, '\1') }
+    names.each do |name|
+      result[name] = !not_installed.include?(name)
+    end
   when :debian
-    result = {}
     installed = capture("dpkg-query -s #{names.join(' ')} 2>/dev/null | grep '^Package: '; true")
     installed = installed.gsub(/^Package: /, '').split("\n")
     names.each do |name|
       result[name] = installed.include?(name)
     end
-    result
   else
     raise "Bug"
   end
+  result
 end
 
 def filter_non_installed_packages(host, names)
@@ -110,7 +174,7 @@ def filter_non_installed_packages(host, names)
 end
 
 
-def autodetect_nginx!
+def autodetect_nginx!(host)
   result = {}
   if test("[[ -e /usr/bin/nginx && -e /etc/nginx/nginx.conf ]]")
     result[:installed_from_system_package] = true
@@ -126,34 +190,60 @@ def autodetect_nginx!
   result
 end
 
-def autodetect_passenger!
-  ruby   = autodetect_ruby_interpreter_for_passenger!
-  result = { :ruby => ruby }
-  if test("[[ -e /usr/bin/passenger-config ]]")
-    result[:installed_from_system_package] = true
-    result[:bindir]            = "/usr/bin"
-    result[:nginx_installer]   = "/usr/bin/passenger-install-nginx-module"
-    result[:apache2_installer] = "/usr/bin/passenger-install-apache2-module"
-    result[:config_command]    = "/usr/bin/passenger-config"
-  elsif test("[[ -e /opt/passenger/current/bin/passenger-config ]]")
-    result[:bindir]            = "/opt/passenger/current/bin"
-    result[:nginx_installer]   = "#{ruby} /opt/passenger/current/bin/passenger-install-nginx-module"
-    result[:apache2_installer] = "#{ruby} /opt/passenger/current/bin/passenger-install-apache2-module"
-    result[:config_command]    = "#{ruby} /opt/passenger/current/bin/passenger-config"
-  else
-    fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in Flippo. " +
-      "Please report this to the authors.")
+def autodetect_passenger(host)
+  cache(host, :passenger) do
+    ruby   = autodetect_ruby_interpreter_for_passenger(host)
+    result = { :ruby => ruby }
+    if test("[[ -e /usr/bin/passenger-config ]]")
+      result[:installed_from_system_package] = true
+      result[:bindir]            = "/usr/bin"
+      result[:nginx_installer]   = "/usr/bin/passenger-install-nginx-module"
+      result[:apache2_installer] = "/usr/bin/passenger-install-apache2-module"
+      result[:config_command]    = "/usr/bin/passenger-config"
+      result
+    elsif test("[[ -e /opt/passenger/current/bin/passenger-config ]]")
+      result[:bindir]            = "/opt/passenger/current/bin"
+      result[:nginx_installer]   = "#{ruby} /opt/passenger/current/bin/passenger-install-nginx-module".strip
+      result[:apache2_installer] = "#{ruby} /opt/passenger/current/bin/passenger-install-apache2-module".strip
+      result[:config_command]    = "#{ruby} /opt/passenger/current/bin/passenger-config".strip
+      result
+    else
+      passenger_config = capture("which passenger-config", :raise_on_non_zero_exit => false).strip
+      if passenger_config.empty?
+        nil
+      else
+        bindir = File.dirname(passenger_config)
+        result[:bindir] = bindir
+        result[:nginx_installer]   = "#{bindir}/passenger-install-nginx-module"
+        result[:apache2_installer] = "#{bindir}/passenger-install-apache2-module"
+        result[:config_command]    = passenger_config
+        result
+      end
+    end
   end
-  result
 end
 
-def autodetect_ruby_interpreter_for_passenger!
-  if test("[[ -e /usr/bin/ruby ]]")
-    "/usr/bin/ruby"
-  elsif test("[[ -e /usr/local/rvm/wrappers/default/ruby ]]")
-    "/usr/local/rvm/wrappers/default/ruby"
-  else
-    abort "Unable to find a Ruby interpreter on the system. This is probably " +
-      "a bug in Flippo. Please report this to the authors."
+def autodetect_passenger!(host)
+  autodetect_passenger(host) || \
+    fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in Flippo. " +
+      "Please report this to the authors.")
+end
+
+def autodetect_ruby_interpreter_for_passenger(host)
+  cache(host, :ruby) do
+    if test("[[ -e /usr/bin/ruby ]]")
+      "/usr/bin/ruby"
+    elsif test("[[ -e /usr/local/rvm/wrappers/default/ruby ]]")
+      "/usr/local/rvm/wrappers/default/ruby"
+    else
+      nil
+    end
   end
+end
+
+
+def autodetect_ruby_interpreter_for_passenger!(host)
+  autodetect_ruby_interpreter_for_passenger(host) || \
+    fatal_and_abort("Unable to find a Ruby interpreter on the system. This is probably " +
+      "a bug in Flippo. Please report this to the authors.")
 end

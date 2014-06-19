@@ -22,21 +22,21 @@ task :install_flippo_manifest => :install_essentials do
   config.puts JSON.dump(CONFIG)
   config.rewind
 
-  on roles(:app) do
-    upload! config, "#{app_dir}/flippo-setup.json"
-    execute "chown root: #{app_dir}/flippo-setup.json && " +
-      "chmod 600 #{app_dir}/flippo-setup.json"
-    execute "mkdir -p /etc/flippo/apps && " +
+  on roles(:app) do |host|
+    sudo_upload(config, "#{app_dir}/flippo-setup.json")
+    sudo(host, "chown root: #{app_dir}/flippo-setup.json && " +
+      "chmod 600 #{app_dir}/flippo-setup.json")
+    sudo(host, "mkdir -p /etc/flippo/apps && " +
       "cd /etc/flippo/apps && " +
       "rm -f #{name} && " +
-      "ln -s #{app_dir} #{name}"
+      "ln -s #{app_dir} #{name}")
   end
 
-  on roles(:app, :db) do
-    execute "mkdir -p /etc/flippo/setup && " +
+  on roles(:app, :db) do |host|
+    sudo(host, "mkdir -p /etc/flippo/setup && " +
       "cd /etc/flippo/setup && " +
       "date +%s > last_run_time && " +
-      "echo #{Flippo::VERSION_STRING} > last_run_version"
+      "echo #{Flippo::VERSION_STRING} > last_run_version")
   end
 end
 
@@ -46,23 +46,20 @@ task :restart_services => :install_essentials do
     when :redhat
       raise "TODO"
     when :debian
-      case CONFIG['web_server_type']
-      when 'nginx'
-        if test("[[ -e /var/run/flippo/restart_web_server ]]")
-          execute "rm -f /var/run/flippo/restart_web_server"
+      if test("sudo test -e /var/run/flippo/restart_web_server")
+        sudo(host, "rm -f /var/run/flippo/restart_web_server")
+        case CONFIG['web_server_type']
+        when 'nginx'
           if test("[[ -e /etc/init.d/nginx ]]")
-            execute "/etc/init.d/nginx restart"
+            sudo(host, "/etc/init.d/nginx restart")
           elsif test("[[ -e /etc/service/nginx ]]")
-            execute "sv restart /etc/service/nginx"
+            sudo(host, "sv restart /etc/service/nginx")
           end
+        when 'apache'
+          sudo(host, "service apache2 restart")
+        else
+          abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
         end
-      when 'apache'
-        execute(
-          "if [[ -e /var/run/flippo/restart_web_server ]]; then " +
-            "rm -f /var/run/flippo/restart_web_server && service apache2 restart; " +
-          "fi")
-      else
-        abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
       end
     else
       raise "Bug"

@@ -44,16 +44,16 @@ task :autodetect_os do
 end
 
 task :install_essentials => :autodetect_os do
-  on roles(:app, :db) do
-    execute "mkdir -p /var/run/flippo && chmod 700 /var/run/flippo"
+  on roles(:app, :db) do |host|
+    sudo(host, "mkdir -p /var/run/flippo && chmod 700 /var/run/flippo")
   end
 
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
-      yum_install(host, %w(coreutils git sudo curl gcc g++ make))
+      yum_install(host, %w(coreutils git sudo curl which gcc gcc-c++ make))
     when :debian
-      apt_get_install(host, %w(coreutils git sudo curl apt-transport-https ca-certificates lsb-release build-essential))
+      apt_get_install(host, %w(coreutils git sudo curl which apt-transport-https ca-certificates lsb-release build-essential))
     else
       raise "Bug"
     end

@@ -1,7 +1,9 @@
 task :install_passenger => :install_essentials do
   if CONFIG['install_passenger']
     on roles(:app) do |host|
-      if !passenger_installed?
+      if passenger_installed?(host)
+        check_passenger_version_supported(host)
+      else
         case host.properties.fetch(:os_class)
         when :redhat
           install_passenger_from_source(host)
@@ -16,13 +18,28 @@ task :install_passenger => :install_essentials do
           raise "Bug"
         end
       end
-      add_passenger_bindir_to_path
+
+      maybe_add_passenger_bindir_to_path(host)
     end
   end
 end
 
-def passenger_installed?
-  test("[[ -e /usr/bin/passenger-config || -e /opt/passenger/current/bin/passenger-config ]]")
+def passenger_installed?(host)
+  !!autodetect_passenger(host)
+end
+
+def check_passenger_version_supported(host)
+  passenger_info = autodetect_passenger!(host)
+  p passenger_info
+  version = capture("#{passenger_info[:config_command]} --version").strip
+  if version < "4.0.45"
+    fatal_and_abort "Your server already has Phusion Passenger version #{version} " +
+      "installed. Flippo requires Passenger 4.0.45 or later, but it currently " +
+      "does not support automatically upgrading Passenger. There are two things you can do:\n\n" +
+      " 1. Upgrade Passenger manually. You can find upgrade instructions in the official Passenger manuals: " +
+          "https://www.phusionpassenger.com/documentation\n" +
+      " 2. Uninstall Passenger, so that Flippo can install Passenger from scratch."
+  end
 end
 
 def can_install_passenger_from_apt_repo?(codename)
@@ -47,105 +64,93 @@ def install_passenger_from_apt(host, codename)
       config.puts "deb https://oss-binaries.phusionpassenger.com/apt/passenger #{codename} main"
     end
     config.rewind
-    upload! config, "/etc/apt/sources.list.d/passenger.list"
+
+    sudo_upload(host, config, "/etc/apt/sources.list.d/passenger.list")
     execute "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7"
     apt_get_update(host)
   end
-  execute "chmod 600 /etc/apt/sources.list.d/passenger.list"
 
   if CONFIG['passenger_enterprise']
+    sudo(host, "chmod 600 /etc/apt/sources.list.d/passenger.list")
     apt_get_install(host, "passenger-enterprise")
   else
     apt_get_install(host, "passenger")
   end
 
-  # if CONFIG['install_web_server']
-  #   case CONFIG['web_server_type']
-  #   when 'nginx'
-  #     apt_get_install(host, %w(nginx-extras passenger))
-  #     md5 = capture("md5sum /etc/nginx/nginx.conf")
-  #     execute "sed -i 's|# passenger_root|passenger_root|' /etc/nginx/nginx.conf"
-  #     execute "sed -i 's|# passenger_ruby|passenger_ruby|' /etc/nginx/nginx.conf"
-
-  #     # Restart Nginx if config changed.
-  #     if capture("md5sum /etc/nginx/nginx.conf") != md5
-  #       execute "service nginx restart"
-  #     end
-  #   when 'apache'
-  #     apt_get_install(host, "libapache2-mod-passenger")
-  #     if !test("[[ -e /etc/apache2/mods-enabled/passenger.load ]]")
-  #       execute "a2enmod passenger && service apache2 restart"
-  #     end
-  #   else
-  #     abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
-  #   end
-  # end
+  clear_cache(host, :passenger)
 end
 
 def install_passenger_from_source(host)
-  # Install a Ruby runtime for Passenger.
-  if CONFIG['type'] == 'ruby'
-    invoke :install_ruby_runtime
-  else
-    # If the app language is not Ruby, we don't want to install a full-blown
-    # Ruby runtime for apps. We just want to install a minimalist Ruby just to
-    # be able to run Passenger.
-    case host.properties.fetch(:os_class)
-    when :redhat
-      yum_install(host, %w(ruby rubygem-rake))
-    when :debian
-      apt_get_install(host, %w(ruby ruby-dev rake))
-    else
-      raise "Bug"
-    end
-  end
-
-  # Install dependencies.
-  case host.properties.fetch(:os_class)
-  when :redhat
-    raise "TODO"
-  when :debian
-    apt_get_install(host, %w(libcurl4-openssl-dev zlib1g-dev))
-  else
-    raise "Bug"
-  end
+  invoke :install_passenger_source_dependencies
 
   # Install Passenger.
   if !test("[[ -e /opt/passenger/current ]]")
-    tmpdir = capture("mktemp -d /tmp/flippo.XXXXXX").strip
-    begin
+    mktempdir(host) do |tmpdir|
       # Download tarball and infer directory name.
       passenger_tarball_url = "https://www.phusionpassenger.com/latest_stable_tarball"
       execute("curl --fail --silent -L -o #{tmpdir}/passenger.tar.gz #{passenger_tarball_url}")
       dirname = capture("tar tzf #{tmpdir}/passenger.tar.gz | head -n 1").strip.sub(/\/$/, '')
 
       # Extract tarball.
-      execute("mkdir -p /opt/passenger && " +
+      sudo(host, "mkdir -p /opt/passenger && " +
         "cd /opt/passenger && " +
         "tar xzf #{tmpdir}/passenger.tar.gz && " +
         "chown -R root: #{dirname}")
 
       # Update symlink.
-      execute("rm -f /opt/passenger/current && " +
+      sudo(host, "rm -f /opt/passenger/current && " +
         "cd /opt/passenger && " +
         "ln -s #{dirname} current")
-    ensure
-      execute("rm -rf #{tmpdir}")
+    end
+  end
+
+  clear_cache(host, :passenger)
+end
+
+task :install_passenger_source_dependencies => :install_essentials do
+  on roles(:app) do |host|
+    # Install a Ruby runtime for Passenger.
+    if CONFIG['type'] == 'ruby'
+      invoke :install_ruby_runtime
+      # TODO: install Rake for this particular Ruby
+    else
+      # If the app language is not Ruby, we don't want to install a full-blown
+      # Ruby runtime for apps. We just want to install a minimalist Ruby just to
+      # be able to run Passenger.
+      case host.properties.fetch(:os_class)
+      when :redhat
+        yum_install(host, %w(ruby rubygem-rake))
+      when :debian
+        apt_get_install(host, %w(ruby ruby-dev rake))
+      else
+        raise "Bug"
+      end
+      clear_cache(:ruby)
+    end
+
+    case host.properties.fetch(:os_class)
+    when :redhat
+      yum_install(host, %w(curl-devel openssl-devel zlib-devel))
+    when :debian
+      apt_get_install(host, %w(libcurl4-openssl-dev libssl-dev zlib1g-dev))
+    else
+      raise "Bug"
     end
   end
 end
 
-def add_passenger_bindir_to_path
-  passenger_info = autodetect_passenger!
+def maybe_add_passenger_bindir_to_path(host)
+  passenger_info = autodetect_passenger!(host)
   installed_from_system_package = passenger_info[:installed_from_system_package]
   bindir = passenger_info[:bindir]
 
   if !installed_from_system_package && test("[[ -e /etc/profile.d && ! -e /etc/profile.d/passenger.sh ]]")
     io = StringIO.new
+    io.puts "# Installed by Flippo."
     io.puts "export PATH=$PATH:#{bindir}"
     io.rewind
 
-    upload!(io, "/etc/profile.d/passenger.sh")
-    execute "chmod 755 /etc/profile.d/passenger.sh"
+    sudo_upload(host, io, "/etc/profile.d/passenger.sh")
+    sudo(host, "chmod 755 /etc/profile.d/passenger.sh")
   end
 end

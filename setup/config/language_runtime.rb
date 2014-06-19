@@ -14,10 +14,20 @@ task :install_ruby_runtime do
 end
 
 def install_rvm
-  on roles(:app) do
+  on roles(:app) do |host|
     if !test("[[ -e /usr/local/rvm/bin/rvm ]]")
-      execute(b "curl -sSL https://get.rvm.io | sudo -H bash -s stable --ruby")
+      sudo(host, "curl -sSL https://get.rvm.io | bash -s stable --ruby")
     end
+    if !test("[[ -h /usr/local/rvm/rubies/default ]]")
+      rubies = capture("ls -1 /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
+      rubies = rubies.split("\n").map { |x| File.dirname(x) }.sort
+      if rubies.empty?
+        sudo(host, "/usr/local/rvm/bin/rvm install ruby")
+      else
+        sudo(host, "/usr/local/rvm/bin/rvm --default #{rubies.last}")
+      end
+    end
+    clear_cache(:ruby)
   end
 end
 
@@ -26,7 +36,13 @@ def install_common_ruby_app_dependencies
     on roles(:app) do |host|
       case host.properties.fetch(:os_class)
       when :redhat
-        raise "TODO"
+        packages = []
+        # For Rails.
+        packages.concat %w(nodejs)
+        # For Nokogiri.
+        packages.concat %w(libxml2-devel libxslt-devel)
+
+        yum_install(host, packages)
       when :debian
         packages = []
         # For Rails.
