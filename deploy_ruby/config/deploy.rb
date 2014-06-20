@@ -46,15 +46,15 @@ namespace :deploy do
   desc 'Sanity check codebase'
   task :check_codebase do
     gemfile_lock = `git show HEAD:Gemfile.lock`
-    config = fetch(:flippo_setup)
+    config = fetch(:onepush_setup)
 
     case config['database_type']
     when 'postgresql'
       if gemfile_lock !~ / pg /
-        fatal_and_abort "Flippo uses PostgreSQL as database. However, your " +
+        fatal_and_abort "Onepush uses PostgreSQL as database. However, your " +
           "app does not include the PostgreSQL driver. Please add this to your Gemfile:\n" +
           "  gem 'pg'\n\n" +
-          "Then run 'bundle install', then run 'flippo deploy' again."
+          "Then run 'bundle install', then run 'onepush deploy' again."
       end
     else
       fatal_and_abort "Unsupported database type. Only PostgreSQL is supported."

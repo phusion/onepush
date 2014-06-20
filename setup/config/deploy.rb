@@ -11,10 +11,10 @@ fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFI
 CONFIG = JSON.parse(File.read(ENV['CONFIG_FILE']))
 
 check_config_requirements(CONFIG)
-Flippo.set_config_defaults(CONFIG)
+Onepush.set_config_defaults(CONFIG)
 
 
-task :install_flippo_manifest => :install_essentials do
+task :install_onepush_manifest => :install_essentials do
   name    = CONFIG['name']
   app_dir = CONFIG['app_dir']
 
@@ -24,27 +24,27 @@ task :install_flippo_manifest => :install_essentials do
 
   on roles(:app) do |host|
     user = CONFIG['user']
-    sudo_upload(host, config, "#{app_dir}/flippo-setup.json")
-    sudo(host, "chown #{user}: #{app_dir}/flippo-setup.json && " +
-      "chmod 600 #{app_dir}/flippo-setup.json")
-    sudo(host, "mkdir -p /etc/flippo/apps && " +
-      "cd /etc/flippo/apps && " +
+    sudo_upload(host, config, "#{app_dir}/onepush-setup.json")
+    sudo(host, "chown #{user}: #{app_dir}/onepush-setup.json && " +
+      "chmod 600 #{app_dir}/onepush-setup.json")
+    sudo(host, "mkdir -p /etc/onepush/apps && " +
+      "cd /etc/onepush/apps && " +
       "rm -f #{name} && " +
       "ln -s #{app_dir} #{name}")
   end
 
   on roles(:app, :db) do |host|
-    sudo(host, "mkdir -p /etc/flippo/setup && " +
-      "cd /etc/flippo/setup && " +
+    sudo(host, "mkdir -p /etc/onepush/setup && " +
+      "cd /etc/onepush/setup && " +
       "date +%s > last_run_time && " +
-      "echo #{Flippo::VERSION_STRING} > last_run_version")
+      "echo #{Onepush::VERSION_STRING} > last_run_version")
   end
 end
 
 task :restart_services => :install_essentials do
   on roles(:app) do |host|
-    if test("sudo test -e /var/run/flippo/restart_web_server")
-      sudo(host, "rm -f /var/run/flippo/restart_web_server")
+    if test("sudo test -e /var/run/onepush/restart_web_server")
+      sudo(host, "rm -f /var/run/onepush/restart_web_server")
       case CONFIG['web_server_type']
       when 'nginx'
         if test("[[ -e /etc/init.d/nginx ]]")
@@ -59,7 +59,7 @@ task :restart_services => :install_essentials do
           sudo(host, "/etc/init.d/httpd restart")
         end
       else
-        abort "Unsupported web server. Flippo supports 'nginx' and 'apache'."
+        abort "Unsupported web server. Onepush supports 'nginx' and 'apache'."
       end
     end
   end
@@ -81,6 +81,6 @@ task :setup do
     CONFIG['database_type'], CONFIG['database_name'],
     CONFIG['database_user'])
   invoke :create_app_vhost
-  invoke :install_flippo_manifest
+  invoke :install_onepush_manifest
   invoke :restart_services
 end

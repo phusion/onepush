@@ -9,7 +9,7 @@ fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFI
 
 CONFIG = JSON.parse(File.read(ENV['CONFIG_FILE']))
 check_config_requirements(CONFIG)
-Flippo.set_config_defaults(CONFIG)
+Onepush.set_config_defaults(CONFIG)
 
 
 namespace :deploy do

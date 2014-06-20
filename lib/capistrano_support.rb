@@ -78,18 +78,18 @@ def wrap_in_sudo(host, command)
     if !host.properties.fetch(:sudo_checked)
       if test("[[ -e /usr/bin/sudo ]]")
         if !test("/usr/bin/sudo -k -n true")
-          fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, Flippo " +
+          fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, Onepush " +
             "needs sudo to *not* ask for a password. Please *temporarily* configure " +
             "sudo to allow the '#{host.user}' user to run it without a password.\n\n" +
             "Open the sudo configuration file:\n" +
             "  sudo visudo\n\n" +
             "Then insert:\n" +
-            "  # Remove this entry later. Flippo only needs it temporarily.\n" +
+            "  # Remove this entry later. Onepush only needs it temporarily.\n" +
             "  #{host.user} ALL=(ALL) NOPASSWD: ALL"
         end
         host.properties.set(:sudo_checked, true)
       else
-        fatal_and_abort "Flippo requires 'sudo' to be installed on the server. Please install it first."
+        fatal_and_abort "Onepush requires 'sudo' to be installed on the server. Please install it first."
       end
     end
     "/usr/bin/sudo -k -n -H #{b command}"
@@ -102,7 +102,7 @@ def b(script)
 end
 
 def mktempdir(host)
-  tmpdir = capture("mktemp -d /tmp/flippo.XXXXXXXX").strip
+  tmpdir = capture("mktemp -d /tmp/onepush.XXXXXXXX").strip
   begin
     yield tmpdir
   ensure
@@ -211,7 +211,7 @@ def autodetect_nginx!(host)
     result[:binary]      = "/opt/nginx/sbin/nginx"
     result[:config_file] = "/opt/nginx/conf/nginx.conf"
   else
-    fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Flippo. " +
+    fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Onepush. " +
       "Please report this to the authors.")
   end
   result
@@ -252,7 +252,7 @@ end
 
 def autodetect_passenger!(host)
   autodetect_passenger(host) || \
-    fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in Flippo. " +
+    fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in Onepush. " +
       "Please report this to the authors.")
 end
 
@@ -288,7 +288,7 @@ end
 def autodetect_ruby_interpreter_for_passenger!(host)
   autodetect_ruby_interpreter_for_passenger(host) || \
     fatal_and_abort("Unable to find a Ruby interpreter on the system. This is probably " +
-      "a bug in Flippo. Please report this to the authors.")
+      "a bug in Onepush. Please report this to the authors.")
 end
 
 
@@ -305,17 +305,17 @@ def _check_server_setup(host)
 
   set :application, CONFIG['name']
 
-  app_dir = capture("readlink /etc/flippo/apps/#{name}; true").strip
+  app_dir = capture("readlink /etc/onepush/apps/#{name}; true").strip
   if app_dir.empty?
-    fatal_and_abort "The server has not been setup for your app yet. Please run 'flippo setup'."
+    fatal_and_abort "The server has not been setup for your app yet. Please run 'onepush setup'."
   end
   set(:deploy_to, app_dir)
-  set(:repo_url, "#{app_dir}/flippo_repo")
+  set(:repo_url, "#{app_dir}/onepush_repo")
 
   io = StringIO.new
-  download!("#{app_dir}/flippo-setup.json", io)
+  download!("#{app_dir}/onepush-setup.json", io)
   config = JSON.parse(io.string)
-  set(:flippo_setup, config)
+  set(:onepush_setup, config)
 
   if config['ruby_version']
     set :rvm_ruby_version, config['ruby_version']
@@ -325,6 +325,6 @@ def _check_server_setup(host)
   rvm_path = fetch(:rvm_path)
   ruby_version = fetch(:rvm_ruby_version)
   if !test("#{rvm_path}/bin/rvm #{ruby_version} do ruby --version")
-    fatal_and_abort "Your app requires #{ruby_version}, but it isn't installed yet. Please run 'flippo setup'."
+    fatal_and_abort "Your app requires #{ruby_version}, but it isn't installed yet. Please run 'onepush setup'."
   end
 end

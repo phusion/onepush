@@ -1,6 +1,6 @@
 require_relative 'version'
 
-module Flippo
+module Onepush
   class << self
     def set_config_defaults(config)
       config['user'] ||= config['name']
@@ -20,8 +20,8 @@ module Flippo
       set_boolean_default(config, 'passenger_enterprise', false)
       set_boolean_default(config, 'passenger_force_install_from_source', false)
 
-      config['flippo_version'] = VERSION_STRING
-      config['flippo_config_format_version'] = CONFIG_FORMAT_VERSION_STRING
+      config['onepush_version'] = VERSION_STRING
+      config['onepush_config_format_version'] = CONFIG_FORMAT_VERSION_STRING
     end
 
   private
