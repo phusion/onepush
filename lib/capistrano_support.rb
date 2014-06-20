@@ -36,14 +36,20 @@ def fatal_and_abort(message)
 end
 
 
-def check_config_requirements(config)
-  ['name', 'type', 'domain_names'].each do |key|
-    if !config[key]
-      fatal_and_abort("The '#{key}' option must be set")
+def check_manifest_requirements(manifest)
+  if !manifest['about']
+    fatal_and_abort("There must be an 'about' section in the manifest")
+  end
+  ['id', 'type', 'domain_names'].each do |key|
+    if !manifest['about'][key]
+      fatal_and_abort("The '#{key}' option must be set in the 'about' section")
     end
   end
-  if config['passenger_enterprise'] && !config['passenger_enterprise_download_token']
-    fatal_and_abort "If you set passenger_enterprise to true, then you must also set passenger_enterprise_download_token"
+  if setup = manifest['setup']
+    if setup['passenger_enterprise'] && !setup['passenger_enterprise_download_token']
+      fatal_and_abort("If you set passenger_enterprise to true, then you must also " +
+        "set passenger_enterprise_download_token")
+    end
   end
 end
 
@@ -202,19 +208,27 @@ end
 
 
 def autodetect_nginx!(host)
-  result = {}
-  if test("[[ -e /usr/bin/nginx && -e /etc/nginx/nginx.conf ]]")
-    result[:installed_from_system_package] = true
-    result[:binary]      = "/usr/bin/nginx"
-    result[:config_file] = "/etc/nginx/nginx.conf"
-  elsif test("[[ -e /opt/nginx/sbin/nginx && -e /opt/nginx/conf/nginx.conf ]]")
-    result[:binary]      = "/opt/nginx/sbin/nginx"
-    result[:config_file] = "/opt/nginx/conf/nginx.conf"
-  else
-    fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Onepush. " +
-      "Please report this to the authors.")
+  cache(host, :nginx) do
+    result = {}
+    if test("[[ -e /usr/bin/nginx && -e /etc/nginx/nginx.conf ]]")
+      result[:installed_from_system_package] = true
+      result[:binary]      = "/usr/bin/nginx"
+      result[:config_file] = "/etc/nginx/nginx.conf"
+      result[:configtest_command] = "/etc/init.d/nginx configtest"
+      result[:restart_command] = "/etc/init.d/nginx restart"
+    elsif test("[[ -e /opt/nginx/sbin/nginx && -e /opt/nginx/conf/nginx.conf ]]")
+      result[:binary]      = "/opt/nginx/sbin/nginx"
+      result[:config_file] = "/opt/nginx/conf/nginx.conf"
+      result[:configtest_command] = "/opt/nginx/sbin/nginx -t"
+      if test("[[ -e /etc/service/nginx ]]")
+        result[:restart_command] = "sv restart /etc/service/nginx"
+      end
+    else
+      fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Onepush. " +
+        "Please report this to the authors.")
+    end
+    result
   end
-  result
 end
 
 def autodetect_passenger(host)
@@ -258,7 +272,7 @@ end
 
 def autodetect_ruby_interpreter_for_passenger(host)
   cache(host, :ruby) do
-    if CONFIG['type'] == 'ruby'
+    if MANIFEST['about']['type'] == 'ruby'
       # Since install_passenger_source_dependencies installs RVM
       # if the language is Ruby (and thus, does not install Rake
       # through the OS package manager), we must give RVM precedence
@@ -301,11 +315,11 @@ end
 
 
 def _check_server_setup(host)
-  name = CONFIG['name']
+  id = MANIFEST['about']['id']
 
-  set :application, CONFIG['name']
+  set :application, id
 
-  app_dir = capture("readlink /etc/onepush/apps/#{name}; true").strip
+  app_dir = capture("readlink /etc/onepush/apps/#{id}; true").strip
   if app_dir.empty?
     fatal_and_abort "The server has not been setup for your app yet. Please run 'onepush setup'."
   end
@@ -314,11 +328,11 @@ def _check_server_setup(host)
 
   io = StringIO.new
   download!("#{app_dir}/onepush-setup.json", io)
-  config = JSON.parse(io.string)
-  set(:onepush_setup, config)
+  manifest = JSON.parse(io.string)
+  set(:onepush_setup, manifest)
 
-  if config['ruby_version']
-    set :rvm_ruby_version, config['ruby_version']
+  if manifest['setup']['ruby_version']
+    set :rvm_ruby_version, manifest['setup']['ruby_version']
   end
 
   invoke 'rvm:hook'

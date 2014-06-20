@@ -1,6 +1,6 @@
 task :install_web_server => [:install_essentials, :install_passenger] do
-  if CONFIG['install_web_server']
-    case CONFIG['web_server_type']
+  if SETUP['install_web_server']
+    case SETUP['web_server_type']
     when 'nginx'
       install_nginx
       enable_passenger_nginx
@@ -33,6 +33,7 @@ def install_nginx
     else
       raise "Bug"
     end
+    clear_cache(host, :nginx)
   end
 end
 
@@ -66,7 +67,7 @@ def install_nginx_from_source_with_passenger(host)
 end
 
 def enable_passenger_nginx
-  if CONFIG['install_passenger']
+  if SETUP['install_passenger']
     on roles(:app) do |host|
       config_file      = autodetect_nginx!(host)[:config_file]
       passenger_info   = autodetect_passenger!(host)
@@ -105,10 +106,10 @@ def enable_passenger_nginx
 end
 
 def install_onepush_nginx_vhosts
-  if CONFIG['install_web_server']
+  if SETUP['install_web_server']
     on roles(:app) do |host|
       config_file = autodetect_nginx!(host)[:config_file]
-      include_directive = "include /etc/onepush/apps/*/shared/config/nginx/vhost.conf;"
+      include_directive = "include /etc/onepush/apps/*/shared/config/nginx-vhost.conf;"
 
       io = StringIO.new
       sudo_download(host, config_file, io)
@@ -201,7 +202,7 @@ def install_apache
     end
   end
 
-  if CONFIG['install_passenger']
+  if SETUP['install_passenger']
     install_passenger_apache_module
   end
 end

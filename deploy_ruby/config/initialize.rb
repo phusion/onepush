@@ -7,9 +7,9 @@ require 'json'
 fatal_and_abort "Please set the APP_ROOT environment variable" if !ENV['APP_ROOT']
 fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFIG_FILE']
 
-CONFIG = JSON.parse(File.read(ENV['CONFIG_FILE']))
-check_config_requirements(CONFIG)
-Onepush.set_config_defaults(CONFIG)
+MANIFEST = JSON.parse(File.read(ENV['CONFIG_FILE']))
+check_manifest_requirements(MANIFEST)
+Onepush.set_manifest_defaults(MANIFEST)
 
 
 namespace :deploy do
@@ -39,7 +39,7 @@ end
 #   https://github.com/capistrano/bundler
 #   https://github.com/capistrano/rails
 
-case CONFIG['ruby_manager']
+case MANIFEST['setup']['ruby_manager']
 when 'rvm'
   require 'capistrano/rvm'
 when 'rbenv'

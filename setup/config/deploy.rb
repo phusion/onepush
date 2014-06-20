@@ -8,29 +8,31 @@ require_relative '../../lib/config'
 require_relative '../../lib/version'
 
 fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFIG_FILE']
-CONFIG = JSON.parse(File.read(ENV['CONFIG_FILE']))
+MANIFEST = JSON.parse(File.read(ENV['CONFIG_FILE']))
 
-check_config_requirements(CONFIG)
-Onepush.set_config_defaults(CONFIG)
+check_manifest_requirements(MANIFEST)
+Onepush.set_manifest_defaults(MANIFEST)
+ABOUT = MANIFEST['about']
+SETUP = MANIFEST['setup']
 
 
 task :install_onepush_manifest => :install_essentials do
-  name    = CONFIG['name']
-  app_dir = CONFIG['app_dir']
+  id      = ABOUT['id']
+  app_dir = SETUP['app_dir']
 
   config = StringIO.new
-  config.puts JSON.dump(CONFIG)
+  config.puts JSON.dump(MANIFEST)
   config.rewind
 
   on roles(:app) do |host|
-    user = CONFIG['user']
+    user = SETUP['user']
     sudo_upload(host, config, "#{app_dir}/onepush-setup.json")
     sudo(host, "chown #{user}: #{app_dir}/onepush-setup.json && " +
       "chmod 600 #{app_dir}/onepush-setup.json")
     sudo(host, "mkdir -p /etc/onepush/apps && " +
       "cd /etc/onepush/apps && " +
-      "rm -f #{name} && " +
-      "ln -s #{app_dir} #{name}")
+      "rm -f #{id} && " +
+      "ln -s #{app_dir} #{id}")
   end
 
   on roles(:app, :db) do |host|
@@ -45,12 +47,12 @@ task :restart_services => :install_essentials do
   on roles(:app) do |host|
     if test("sudo test -e /var/run/onepush/restart_web_server")
       sudo(host, "rm -f /var/run/onepush/restart_web_server")
-      case CONFIG['web_server_type']
+      case SETUP['web_server_type']
       when 'nginx'
-        if test("[[ -e /etc/init.d/nginx ]]")
-          sudo(host, "/etc/init.d/nginx restart")
-        elsif test("[[ -e /etc/service/nginx ]]")
-          sudo(host, "sv restart /etc/service/nginx")
+        nginx_info = autodetect_nginx!
+        sudo(host, nginx_info[:configtest_command])
+        if nginx_info[:restart_command]
+          sudo(host, nginx_info[:restart_command])
         end
       when 'apache'
         if test("[[ -e /etc/init.d/apache2 ]]")
@@ -75,11 +77,11 @@ task :setup do
   invoke :create_app_user
   invoke :create_app_dir
   invoke :install_dbms
-  setup_database(CONFIG['database_type'], CONFIG['database_name'],
-    CONFIG['database_user'])
-  create_app_database_config(CONFIG['app_dir'], CONFIG['user'],
-    CONFIG['database_type'], CONFIG['database_name'],
-    CONFIG['database_user'])
+  setup_database(SETUP['database_type'], SETUP['database_name'],
+    SETUP['database_user'])
+  create_app_database_config(SETUP['app_dir'], SETUP['user'],
+    SETUP['database_type'], SETUP['database_name'],
+    SETUP['database_user'])
   invoke :create_app_vhost
   invoke :install_onepush_manifest
   invoke :restart_services

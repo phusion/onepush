@@ -1,5 +1,5 @@
 task :install_passenger => :install_essentials do
-  if CONFIG['install_passenger']
+  if SETUP['install_passenger']
     on roles(:app) do |host|
       if passenger_installed?(host)
         check_passenger_version_supported(host)
@@ -42,7 +42,7 @@ def check_passenger_version_supported(host)
 end
 
 def can_install_passenger_from_apt_repo?(codename)
-  !CONFIG['passenger_force_install_from_source'] && passenger_apt_repo_available?(codename)
+  !SETUP['passenger_force_install_from_source'] && passenger_apt_repo_available?(codename)
 end
 
 def passenger_apt_repo_available?(codename)
@@ -56,8 +56,8 @@ end
 def install_passenger_from_apt(host, codename)
   if !test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
     config = StringIO.new
-    if CONFIG['passenger_enterprise']
-      config.puts "deb https://download:#{CONFIG['passenger_enterprise_download_token']}@" +
+    if SETUP['passenger_enterprise']
+      config.puts "deb https://download:#{SETUP['passenger_enterprise_download_token']}@" +
         "www.phusionpassenger.com/enterprise_apt #{codename} main"
     else
       config.puts "deb https://oss-binaries.phusionpassenger.com/apt/passenger #{codename} main"
@@ -69,7 +69,7 @@ def install_passenger_from_apt(host, codename)
     apt_get_update(host)
   end
 
-  if CONFIG['passenger_enterprise']
+  if SETUP['passenger_enterprise']
     sudo(host, "chmod 600 /etc/apt/sources.list.d/passenger.list")
     apt_get_install(host, "passenger-enterprise")
   else
@@ -114,7 +114,7 @@ end
 
 def _install_passenger_source_dependencies(host)
   # Install a Ruby runtime for Passenger.
-  if CONFIG['type'] == 'ruby'
+  if ABOUT['type'] == 'ruby'
     # This also ensures that Rake is installed.
     _install_ruby_runtime(host)
   else

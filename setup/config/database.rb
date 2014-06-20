@@ -1,5 +1,5 @@
 task :install_dbms => :install_essentials do
-  type = CONFIG['database_type']
+  type = SETUP['database_type']
 
   on roles(:db) do |host|
     case host.properties.fetch(:os_class)

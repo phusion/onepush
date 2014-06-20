@@ -2,26 +2,29 @@ require_relative 'version'
 
 module Onepush
   class << self
-    def set_config_defaults(config)
-      config['user'] ||= config['name']
-      config['app_dir'] ||= "/var/www/#{config['name']}"
+    def set_manifest_defaults(manifest)
+      about = (manifest['about'] ||= {})
+      setup = (manifest['setup'] ||= {})
 
-      config['database_type'] ||= 'postgresql'
-      config['database_name'] ||= config['name']
-      config['database_user'] = config['user']
+      setup['user'] ||= about['id']
+      setup['app_dir'] ||= "/var/www/#{about['id']}"
 
-      set_boolean_default(config, 'install_passenger', true)
-      set_boolean_default(config, 'install_web_server', true)
-      set_boolean_default(config, 'install_common_ruby_app_dependencies', true)
+      setup['database_type'] ||= 'postgresql'
+      setup['database_name'] ||= about['id']
+      setup['database_user'] = setup['user']
 
-      config['ruby_manager'] ||= 'rvm'
-      config['web_server_type'] ||= 'nginx'
+      set_boolean_default(setup, 'install_passenger', true)
+      set_boolean_default(setup, 'install_web_server', true)
+      set_boolean_default(setup, 'install_common_ruby_app_dependencies', true)
 
-      set_boolean_default(config, 'passenger_enterprise', false)
-      set_boolean_default(config, 'passenger_force_install_from_source', false)
+      setup['ruby_manager'] ||= 'rvm'
+      setup['web_server_type'] ||= 'nginx'
 
-      config['onepush_version'] = VERSION_STRING
-      config['onepush_config_format_version'] = CONFIG_FORMAT_VERSION_STRING
+      set_boolean_default(setup, 'passenger_enterprise', false)
+      set_boolean_default(setup, 'passenger_force_install_from_source', false)
+
+      setup['onepush_version'] = VERSION_STRING
+      setup['onepush_manifest_format_version'] = MANIFEST_FORMAT_VERSION_STRING
     end
 
   private
