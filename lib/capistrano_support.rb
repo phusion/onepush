@@ -207,28 +207,38 @@ def filter_non_installed_packages(host, names)
 end
 
 
-def autodetect_nginx!(host)
+def autodetect_nginx(host)
   cache(host, :nginx) do
     result = {}
-    if test("[[ -e /usr/bin/nginx && -e /etc/nginx/nginx.conf ]]")
+    if test("[[ -e /usr/sbin/nginx && -e /etc/nginx/nginx.conf ]]")
       result[:installed_from_system_package] = true
       result[:binary]      = "/usr/bin/nginx"
       result[:config_file] = "/etc/nginx/nginx.conf"
       result[:configtest_command] = "/etc/init.d/nginx configtest"
       result[:restart_command] = "/etc/init.d/nginx restart"
-    elsif test("[[ -e /opt/nginx/sbin/nginx && -e /opt/nginx/conf/nginx.conf ]]")
-      result[:binary]      = "/opt/nginx/sbin/nginx"
-      result[:config_file] = "/opt/nginx/conf/nginx.conf"
-      result[:configtest_command] = "/opt/nginx/sbin/nginx -t"
-      if test("[[ -e /etc/service/nginx ]]")
-        result[:restart_command] = "sv restart /etc/service/nginx"
-      end
+      result
     else
-      fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Onepush. " +
-        "Please report this to the authors.")
+      files = capture("ls -1 /opt/*/*/nginx 2>/dev/null", :raise_on_non_zero_exit => false).split("\n")
+      if files.any?
+        result[:binary] = files[0]
+        result[:config_file] = File.absolute_path(File.dirname(files[0]) + "/../conf/nginx.conf")
+        result[:configtest_command] = "#{files[0]} -t"
+        has_runit_service = files[0] == "/opt/nginx/sbin/nginx" &&
+          test("grep /opt/nginx/sbin/nginx /etc/service/nginx/run 2>&1")
+        if has_runit_service
+          result[:restart_command] = "sv restart /etc/service/nginx"
+        end
+      else
+        nil
+      end
     end
-    result
   end
+end
+
+def autodetect_nginx!(host)
+  autodetect_nginx(host) ||
+    fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Onepush. " +
+      "Please report this to the authors.")
 end
 
 def autodetect_passenger(host)

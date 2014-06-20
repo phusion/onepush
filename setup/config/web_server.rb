@@ -19,11 +19,11 @@ def install_nginx
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
-      if !nginx_installed?
+      if !nginx_installed?(host)
         install_nginx_from_source_with_passenger(host)
       end
     when :debian
-      if !nginx_installed?
+      if !nginx_installed?(host)
         if should_install_nginx_from_phusion_apt?
           install_nginx_from_phusion_apt(host)
         else
@@ -37,13 +37,8 @@ def install_nginx
   end
 end
 
-def nginx_installed?
-  if test(b "[[ -e /usr/bin/nginx || -e /usr/local/bin/nginx ]]")
-    true
-  else
-    files = capture("ls -1 /opt/*/*/nginx 2>/dev/null", :raise_on_non_zero_exit => false).split("\n")
-    files.any?
-  end
+def nginx_installed?(host)
+  !!autodetect_nginx(host)
 end
 
 def should_install_nginx_from_phusion_apt?

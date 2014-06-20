@@ -59,11 +59,11 @@ def setup_database(type, name, user)
     when 'postgresql'
       user_test_script = "cd / && sudo -u postgres -H psql postgres -tAc " +
         "\"SELECT 1 FROM pg_roles WHERE rolname='#{user}'\" | grep -q 1"
-      if !test(b user_test_script)
+      if !sudo_test(host, user_test_script)
         sudo(host, "cd / && sudo -u postgres -H createuser --no-password -SDR #{user}")
       end
 
-      databases = capture(b "cd / && sudo -u postgres -H psql postgres -lqt | cut -d \\| -f 1")
+      databases = sudo_capture(host, "cd / && sudo -u postgres -H psql postgres -lqt | cut -d \\| -f 1")
       if databases !~ /^ *#{Regexp.escape name} *$/
         sudo(host, "cd / && sudo -u postgres -H createdb --no-password --owner #{user} #{name}")
       end
@@ -77,7 +77,7 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
   on roles(:app) do
     if !test("[[ -e #{app_dir}/shared/config/database.yml ]]")
       config = StringIO.new
-      conifg.puts "# Installed by Onepush."
+      config.puts "# Installed by Onepush."
       config.puts "default_settings: &default_settings"
       case db_type
       when 'postgresql'
@@ -101,7 +101,7 @@ def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
 
     if !test("[[ -e #{app_dir}/shared/config/secrets.yml ]]")
       config = StringIO.new
-      conifg.puts "# Installed by Onepush."
+      config.puts "# Installed by Onepush."
       config.puts "default_settings: &default_settings"
       config.puts "  secret_key_base: #{SecureRandom.hex(64)}"
       config.puts

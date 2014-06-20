@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+require 'optparse'
+
+ROOT = File.absolute_path(File.dirname(__FILE__) + "/..")
+PWD  = Dir.pwd
+ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"
+
+require 'bundler/setup'
+require 'json'
+
+command = ARGV[0]
+ARGV.shift
+
+case command
+when "setup"
+  servers = []
+
+  parser = OptionParser.new do |opts|
+    opts.banner = "Usage: onepush setup [options]"
+    opts.separator ""
+
+    opts.separator "Options:"
+    opts.on("--manifest FILENAME", String) do |filename|
+      ENV['MANIFEST_JSON'] = File.read(filename)
+    end
+    opts.on("--manifest-json JSON", String) do |json|
+      ENV['MANIFEST_JSON'] = json
+    end
+    opts.on("--server ADDRESS", String) do |address|
+      servers << address
+    end
+    opts.on("--vagrant-key") do
+      ENV['VAGRANT_KEY'] = '1'
+    end
+  end
+  begin
+    parser.parse!
+  rescue OptionParser::ParseError => e
+    STDERR.puts e
+    STDERR.puts
+    STDERR.puts "Please see '--help' for valid options."
+    exit 1
+  end
+
+  if servers.empty?
+    abort "Please specify at least one --server."
+  end
+
+  Dir.chdir("#{ROOT}/setup")
+  ENV['PWD']     = PWD
+  ENV['SERVERS'] = JSON.generate(servers)
+  exec("bundle", "exec", "cap", "production", "setup")
+
+when "deploy"
+  Dir.chdir("#{ROOT}/deploy_ruby")
+  exec("bundle", "exec", "cap", "vagrant", "deploy", "APP_ROOT=#{PWD}", "CONFIG_FILE=#{PWD}/onepush.json")
+
+else
+  abort "Unknown command"
+end

@@ -64,16 +64,19 @@ def install_passenger_from_apt(host, codename)
     end
     config.rewind
 
+    if host.properties.fetch(:os_class) == :debian
+      sudo(host, "rm -f /var/lib/apt/periodic/update-success-stamp")
+    end
     sudo_upload(host, config, "/etc/apt/sources.list.d/passenger.list")
-    execute "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7"
+    sudo(host, "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7")
     apt_get_update(host)
   end
 
   if SETUP['passenger_enterprise']
     sudo(host, "chmod 600 /etc/apt/sources.list.d/passenger.list")
-    apt_get_install(host, "passenger-enterprise")
+    apt_get_install(host, %w(passenger-enterprise))
   else
-    apt_get_install(host, "passenger")
+    apt_get_install(host, %w(passenger))
   end
 
   clear_cache(host, :passenger)

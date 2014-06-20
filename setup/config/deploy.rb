@@ -4,16 +4,31 @@ require 'securerandom'
 require 'shellwords'
 require 'net/http'
 require 'net/https'
+require_relative '../../lib/my_pretty_formatter'
 require_relative '../../lib/config'
 require_relative '../../lib/version'
 
-fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFIG_FILE']
-MANIFEST = JSON.parse(File.read(ENV['CONFIG_FILE']))
+fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MANIFEST_JSON']
+fatal_and_abort "The PWD option must be set" if !ENV['PWD']
+MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
 ABOUT = MANIFEST['about']
 SETUP = MANIFEST['setup']
+
+set :pty, false
+
+
+after :production, :initialize_onepush do
+  Dir.chdir(ENV['PWD'])
+  if path = ENV['SSHKIT_OUTPUT']
+    output = File.open(path, "a")
+  else
+    output = STDOUT
+  end
+  SSHKit.config.output = Onepush::MyPrettyFormatter.new(output)
+end
 
 
 task :install_onepush_manifest => :install_essentials do
@@ -49,7 +64,7 @@ task :restart_services => :install_essentials do
       sudo(host, "rm -f /var/run/onepush/restart_web_server")
       case SETUP['web_server_type']
       when 'nginx'
-        nginx_info = autodetect_nginx!
+        nginx_info = autodetect_nginx!(host)
         sudo(host, nginx_info[:configtest_command])
         if nginx_info[:restart_command]
           sudo(host, nginx_info[:restart_command])
