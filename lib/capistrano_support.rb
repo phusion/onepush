@@ -1,3 +1,5 @@
+LOGGER = Logger.new(STDOUT)
+
 def log_sshkit(level, message)
   case level
   when :fatal
@@ -18,16 +20,25 @@ def log_sshkit(level, message)
   SSHKit.config.output << SSHKit::LogMessage.new(level, message)
 end
 
+def log_terminal(level, message)
+  if SSHKit.config.output.original_output != STDOUT
+    printf "%-6s -- %s\n", level.to_s.upcase, message
+  end
+end
+
 def fatal(message)
   log_sshkit(:fatal, message)
+  log_terminal(:fatal, message)
 end
 
 def notice(message)
   log_sshkit(:info, message)
+  log_terminal(:notice, message)
 end
 
 def info(message)
   log_sshkit(:info, message)
+  log_terminal(:info, message)
 end
 
 def fatal_and_abort(message)
@@ -142,6 +153,11 @@ def clear_cache(host, name)
   host.properties.set("cache_#{name}", nil)
 end
 
+
+def force_apt_get_update_next_time(host)
+  sudo(host, "rm -f /var/lib/apt/periodic/update-success-stamp")
+  host.properties.set(:apt_get_updated, false)
+end
 
 def apt_get_update(host)
   sudo(host, "apt-get update && touch /var/lib/apt/periodic/update-success-stamp")

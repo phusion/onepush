@@ -1,4 +1,5 @@
 task :install_language_runtime => :install_essentials do
+  notice "Installing language runtime..."
   case ABOUT['type']
   when 'ruby'
     invoke :install_ruby_runtime

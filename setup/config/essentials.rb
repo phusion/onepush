@@ -1,4 +1,5 @@
 task :autodetect_os do
+  notice "Autodetecting operating system..."
   on roles(:app, :db) do |host|
     if test("[[ -e /etc/redhat-release || -e /etc/centos-release ]]")
       host.set(:os_class, :redhat)
@@ -40,7 +41,7 @@ task :autodetect_os do
       distro_version = $1
       if distro_version
         host.set(:os_version, distro_version)
-        notice "Amazon Linux #{distro_version} detected"
+        notice "Amazon Linux #{distro_version} detected."
       else
         fatal_and_abort "Unable to autodetect Amazon Linux version."
       end
@@ -89,10 +90,10 @@ task :autodetect_os do
     host.set(:arch, arch)
 
     if arch =~ /^i.86$/ || arch == "x86"
-      notice "x86 architecture detected"
+      notice "x86 architecture detected."
       host.set(:normalized_arch, "x86")
     elsif arch == "amd64" || arch == "x86_64"
-      notice "x86_64 architecture detected"
+      notice "x86_64 architecture detected."
       host.set(:normalized_arch, "x86_64")
     else
       fatal_and_abort "Unsupported machine architecture #{arch.inspect}. Onepush only " +
@@ -102,6 +103,7 @@ task :autodetect_os do
 end
 
 task :install_essentials => :autodetect_os do
+  notice "Installing essentials..."
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat

@@ -17,21 +17,27 @@ Onepush.set_manifest_defaults(MANIFEST)
 ABOUT = MANIFEST['about']
 SETUP = MANIFEST['setup']
 
-set :pty, false
+TOTAL_STEPS = 11.0
 
 
 after :production, :initialize_onepush do
   Dir.chdir(ENV['PWD'])
+
   if path = ENV['SSHKIT_OUTPUT']
     output = File.open(path, "a")
   else
     output = STDOUT
   end
   SSHKit.config.output = Onepush::MyPrettyFormatter.new(output)
+
+  on roles(:app, :db) do |host|
+    notice "Setting up server: #{host}"
+  end
 end
 
 
 task :install_onepush_manifest => :install_essentials do
+  notice "Saving setup information..."
   id      = ABOUT['id']
   app_dir = SETUP['app_dir']
 
@@ -59,6 +65,7 @@ task :install_onepush_manifest => :install_essentials do
 end
 
 task :restart_services => :install_essentials do
+  notice "Restarting services..."
   on roles(:app) do |host|
     if test("sudo test -e /var/run/onepush/restart_web_server")
       sudo(host, "rm -f /var/run/onepush/restart_web_server")
@@ -82,22 +89,50 @@ task :restart_services => :install_essentials do
   end
 end
 
+def report_progress(fraction)
+  if ENV['REPORT_PROGRESS']
+    puts "PRGRS -- #{fraction}"
+  end
+end
+
 desc "Setup the server environment"
 task :setup do
   invoke :autodetect_os
+  report_progress(1 / TOTAL_STEPS)
+
   invoke :install_essentials
+  report_progress(2 / TOTAL_STEPS)
+
   invoke :install_language_runtime
+  report_progress(3 / TOTAL_STEPS)
+
   invoke :install_passenger
+  report_progress(4 / TOTAL_STEPS)
+
   invoke :install_web_server
+  report_progress(5 / TOTAL_STEPS)
+
   invoke :create_app_user
   invoke :create_app_dir
+  report_progress(6 / TOTAL_STEPS)
+
   invoke :install_dbms
+  report_progress(7 / TOTAL_STEPS)
+
   setup_database(SETUP['database_type'], SETUP['database_name'],
     SETUP['database_user'])
   create_app_database_config(SETUP['app_dir'], SETUP['user'],
     SETUP['database_type'], SETUP['database_name'],
     SETUP['database_user'])
+  report_progress(8 / TOTAL_STEPS)
+
   invoke :create_app_vhost
+  report_progress(9 / TOTAL_STEPS)
+
   invoke :install_onepush_manifest
+  report_progress(10 / TOTAL_STEPS)
   invoke :restart_services
+  report_progress(11 / TOTAL_STEPS)
+
+  notice "Finished."
 end

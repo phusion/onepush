@@ -1,5 +1,6 @@
 task :install_passenger => :install_essentials do
   if SETUP['install_passenger']
+    notice "Installing Phusion Passenger application server..."
     on roles(:app) do |host|
       if passenger_installed?(host)
         check_passenger_version_supported(host)
@@ -64,11 +65,9 @@ def install_passenger_from_apt(host, codename)
     end
     config.rewind
 
-    if host.properties.fetch(:os_class) == :debian
-      sudo(host, "rm -f /var/lib/apt/periodic/update-success-stamp")
-    end
-    sudo_upload(host, config, "/etc/apt/sources.list.d/passenger.list")
     sudo(host, "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 561F9B9CAC40B2F7")
+    sudo_upload(host, config, "/etc/apt/sources.list.d/passenger.list")
+    force_apt_get_update_next_time(host)
     apt_get_update(host)
   end
 

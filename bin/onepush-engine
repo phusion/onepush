@@ -11,6 +11,12 @@ require 'json'
 command = ARGV[0]
 ARGV.shift
 
+ENV.delete('MANIFEST_JSON')
+ENV.delete('SSHKIT_OUTPUT')
+ENV.delete('VAGRANT_KEY')
+ENV.delete('SERVERS')
+ENV.delete('REPORT_PROGRESS')
+
 case command
 when "setup"
   servers = []
@@ -29,8 +35,14 @@ when "setup"
     opts.on("--server ADDRESS", String) do |address|
       servers << address
     end
+    opts.on("--ssh-log FILENAME", String) do |filename|
+      ENV['SSHKIT_OUTPUT'] = filename
+    end
     opts.on("--vagrant-key") do
       ENV['VAGRANT_KEY'] = '1'
+    end
+    opts.on("--progress") do
+      ENV['REPORT_PROGRESS'] = '1'
     end
   end
   begin
@@ -56,5 +68,8 @@ when "deploy"
   exec("bundle", "exec", "cap", "vagrant", "deploy", "APP_ROOT=#{PWD}", "CONFIG_FILE=#{PWD}/onepush.json")
 
 else
-  abort "Unknown command"
+  puts "Usage: onepush <setup|deploy> [options...]"
+  puts
+  puts "Type onepush <COMMAND> --help for more information."
+  exit 1
 end

@@ -1,3 +1,4 @@
+STDOUT.sync = STDERR.sync = true
 require 'capistrano/setup'
 import '../lib/capistrano_support.rb'
 import 'config/essentials.rb'

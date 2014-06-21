@@ -1,5 +1,6 @@
 task :install_web_server => [:install_essentials, :install_passenger] do
   if SETUP['install_web_server']
+    notice "Installing web server..."
     case SETUP['web_server_type']
     when 'nginx'
       install_nginx

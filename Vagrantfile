@@ -1,5 +1,5 @@
-# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = "2"
+ONEPUSH_SSH_HOST_PORT = 5342
 
 case ENV['VM_OS']
 when "ubuntu14", nil
@@ -21,7 +21,7 @@ end
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = BOX_NAME
   config.vm.box_url = BOX_URL
-  config.vm.network :forwarded_port, :guest => 22, :host => 5342
+  config.vm.network :forwarded_port, :guest => 22, :host => ONEPUSH_SSH_HOST_PORT
 
   config.vm.provider :vmware_fusion do |f, override|
     override.vm.box_url = VF_BOX_URL

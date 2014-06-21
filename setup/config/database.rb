@@ -1,4 +1,5 @@
 task :install_dbms => :install_essentials do
+  notice "Installing database software..."
   type = SETUP['database_type']
 
   on roles(:db) do |host|
@@ -54,6 +55,7 @@ task :install_dbms => :install_essentials do
 end
 
 def setup_database(type, name, user)
+  notice "Setting up database for app..."
   on roles(:db) do |host|
     case type
     when 'postgresql'
