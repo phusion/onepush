@@ -1,3 +1,5 @@
+require_relative './my_pretty_formatter'
+
 LOGGER = Logger.new(STDOUT)
 
 def log_sshkit(level, message)
@@ -62,6 +64,16 @@ def check_manifest_requirements(manifest)
         "set passenger_enterprise_download_token")
     end
   end
+end
+
+def initialize_onepush_capistrano
+  if path = ENV['SSHKIT_OUTPUT']
+    output = File.open(path, "a")
+    output.sync = true
+  else
+    output = STDOUT
+  end
+  SSHKit.config.output = Onepush::MyPrettyFormatter.new(output)
 end
 
 

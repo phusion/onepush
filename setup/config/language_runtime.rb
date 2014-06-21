@@ -25,19 +25,23 @@ def install_rvm(host)
   if !test("[[ -e /usr/local/rvm/bin/rvm ]]")
     sudo(host, "curl -sSL https://get.rvm.io | bash -s stable --ruby")
   end
+
+  ruby_version = ABOUT['ruby_version']
+  if ruby_version && !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
+    info "Installing Ruby interpreter: #{ruby_version}"
+    sudo(host, "/usr/local/rvm/bin/rvm install #{ruby_version}")
+  end
+
   if !test("[[ -h /usr/local/rvm/rubies/default ]]")
     rubies = capture("ls -1d /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
     rubies = rubies.split("\n").map { |x| File.basename(x) }.sort
     if rubies.empty?
+      info "Installing Ruby interpreter: latest version"
       sudo(host, "/usr/local/rvm/bin/rvm install ruby")
-    else
-      sudo(host, "/bin/bash -lc 'rvm --default #{rubies.last}'")
+      rubies = capture("ls -1d /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
+      rubies = rubies.split("\n").map { |x| File.basename(x) }.sort
     end
-  end
-
-  ruby_version = ABOUT['ruby_version']
-  if ruby_version && !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
-    sudo(host, "/usr/local/rvm/bin/rvm install #{ruby_version}")
+    sudo(host, "/bin/bash -lc 'rvm --default #{rubies.last}'")
   end
 end
 

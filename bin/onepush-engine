@@ -18,11 +18,11 @@ ENV.delete('SERVERS')
 ENV.delete('REPORT_PROGRESS')
 
 case command
-when "setup"
+when "setup", "deploy"
   servers = []
 
   parser = OptionParser.new do |opts|
-    opts.banner = "Usage: onepush setup [options]"
+    opts.banner = "Usage: onepush #{command} [options]"
     opts.separator ""
 
     opts.separator "Options:"
@@ -58,14 +58,16 @@ when "setup"
     abort "Please specify at least one --server."
   end
 
-  Dir.chdir("#{ROOT}/setup")
-  ENV['PWD']     = PWD
   ENV['SERVERS'] = JSON.generate(servers)
-  exec("bundle", "exec", "cap", "production", "setup")
-
-when "deploy"
-  Dir.chdir("#{ROOT}/deploy_ruby")
-  exec("bundle", "exec", "cap", "vagrant", "deploy", "APP_ROOT=#{PWD}", "CONFIG_FILE=#{PWD}/onepush.json")
+  if command == "setup"
+    ENV['PWD'] = PWD
+    Dir.chdir("#{ROOT}/setup")
+    exec("bundle", "exec", "cap", "production", "setup")
+  else
+    ENV['APP_ROOT'] = PWD
+    Dir.chdir("#{ROOT}/deploy_ruby")
+    exec("bundle", "exec", "cap", "vagrant", "deploy")
+  end
 
 else
   puts "Usage: onepush <setup|deploy> [options...]"

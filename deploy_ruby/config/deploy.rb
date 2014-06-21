@@ -1,29 +1,5 @@
-# Default branch is :master
-# ask :branch, proc { `git rev-parse --abbrev-ref HEAD`.chomp }.call
-
-# Default value for :scm is :git
-# set :scm, :git
-
-# Default value for :format is :pretty
-# set :format, :pretty
-
-# Default value for :log_level is :debug
-# set :log_level, :debug
-
-# Default value for :pty is false
-# set :pty, true
-
 # Default value for :linked_files is []
 set :linked_files, %w{config/database.yml config/secrets.yml}
-
-# Default value for linked_dirs is []
-# set :linked_dirs, %w{bin log tmp/pids tmp/cache tmp/sockets vendor/bundle public/system}
-
-# Default value for default_env is {}
-# set :default_env, { path: "/opt/ruby/bin:$PATH" }
-
-# Default value for keep_releases is 5
-# set :keep_releases, 5
 
 namespace :deploy do
   # Override migrate task from capistrano-rails.
@@ -122,5 +98,55 @@ namespace :deploy do
         execute :rake, 'tmp:clear'
       end
     end
+  end
+
+
+  ###### Progress reporting hooks ######
+  
+  TOTAL_STEPS = 8.0
+
+  before :starting, :report_progress_starting do
+    notice "Running sanity checks..."
+    report_progress(1 / TOTAL_STEPS)
+  end
+
+  before :updating, :report_progress_updating do
+    notice "Copying files for new release..."
+    report_progress(2 / TOTAL_STEPS)
+  end
+
+  before '^bundler:install', :report_progress_bundle_install do
+    notice "Installing gem bundle..."
+    report_progress(3 / TOTAL_STEPS)
+  end
+
+  before :compile_assets, :report_progress_compile_assets do
+    notice "Compiling assets..."
+    report_progress(4 / TOTAL_STEPS)
+  end
+
+  before :normalize_assets, :report_progress_normalize_assets do
+    notice "Normalizing assets..."
+    report_progress(5 / TOTAL_STEPS)
+  end
+
+  before :migrate, :report_progress_migrate do
+    notice "Running database migrations..."
+    report_progress(6 / TOTAL_STEPS)
+  end
+
+  before :reverting, :report_progress_reverting do
+    notice "Reverting to previous release..."
+    report_progress((TOTAL_STEPS - 1) / TOTAL_STEPS)
+  end
+
+  before :finishing, :report_progress_finishing do
+    notice "Finalizing release..."
+    report_progress((TOTAL_STEPS - 1) / TOTAL_STEPS)
+  end
+
+  after :finished, :report_progress_finished do
+    notice "Finished!"
+    report_progress(1)
   end
 end

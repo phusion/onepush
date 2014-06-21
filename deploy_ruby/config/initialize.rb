@@ -5,14 +5,25 @@ require 'stringio'
 require 'json'
 
 fatal_and_abort "Please set the APP_ROOT environment variable" if !ENV['APP_ROOT']
-fatal_and_abort "Please set the CONFIG_FILE environment variable" if !ENV['CONFIG_FILE']
+fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MANIFEST_JSON']
 
-MANIFEST = JSON.parse(File.read(ENV['CONFIG_FILE']))
+MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
+ABOUT = MANIFEST['about']
+SETUP = MANIFEST['setup']
+
+# If Capistrano is terminated, having a PTY will allow
+# all commands on the server to properly terminate.
+set :pty, true
 
 
 namespace :deploy do
+  task :initialize_onepush do
+    Dir.chdir(ENV['APP_ROOT'])
+    initialize_onepush_capistrano
+  end
+
   # Check whether the server is setup correctly, and autodetect various
   # information. The server is the primary source of truth, not the config
   # file.
@@ -25,6 +36,7 @@ end
 
 # We install check_server_setup here so that it runs before the RVM hook.
 Capistrano::DSL.stages.each do |stage|
+  after stage, 'deploy:initialize_onepush'
   after stage, 'deploy:check_server_setup'
 end
 
@@ -39,7 +51,7 @@ end
 #   https://github.com/capistrano/bundler
 #   https://github.com/capistrano/rails
 
-case MANIFEST['setup']['ruby_manager']
+case SETUP['ruby_manager']
 when 'rvm'
   require 'capistrano/rvm'
 when 'rbenv'

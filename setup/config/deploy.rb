@@ -4,14 +4,13 @@ require 'securerandom'
 require 'shellwords'
 require 'net/http'
 require 'net/https'
-require_relative '../../lib/my_pretty_formatter'
 require_relative '../../lib/config'
 require_relative '../../lib/version'
 
 fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MANIFEST_JSON']
 fatal_and_abort "The PWD option must be set" if !ENV['PWD']
-MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 
+MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
 ABOUT = MANIFEST['about']
@@ -19,17 +18,14 @@ SETUP = MANIFEST['setup']
 
 TOTAL_STEPS = 11.0
 
+# If Capistrano is terminated, having a PTY will allow
+# all commands on the server to properly terminate.
+set :pty, true
+
 
 after :production, :initialize_onepush do
   Dir.chdir(ENV['PWD'])
-
-  if path = ENV['SSHKIT_OUTPUT']
-    output = File.open(path, "a")
-  else
-    output = STDOUT
-  end
-  SSHKit.config.output = Onepush::MyPrettyFormatter.new(output)
-
+  initialize_onepush_capistrano
   on roles(:app, :db) do |host|
     notice "Setting up server: #{host}"
   end
@@ -91,7 +87,7 @@ end
 
 def report_progress(fraction)
   if ENV['REPORT_PROGRESS']
-    puts "PRGRS -- #{fraction}"
+    puts "PROGRS -- #{fraction}"
   end
 end
 
