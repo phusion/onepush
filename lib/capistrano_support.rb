@@ -1,6 +1,8 @@
 require_relative './my_pretty_formatter'
 
 LOGGER = Logger.new(STDOUT)
+REPORT_PROGRESS = ENV['REPORT_PROGRESS']
+PROGRESS_BASE = ENV.fetch('PROGRESS_BASE', 0).to_f
 
 def log_sshkit(level, message)
   case level
@@ -46,6 +48,13 @@ end
 def fatal_and_abort(message)
   fatal(message)
   abort
+end
+
+def report_progress(step, total)
+  if REPORT_PROGRESS
+    fraction = (step / total.to_f) * (1.0 - PROGRESS_BASE)
+    puts "PROGRS -- #{PROGRESS_BASE + fraction}"
+  end
 end
 
 

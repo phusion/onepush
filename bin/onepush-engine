@@ -16,6 +16,7 @@ ENV.delete('SSHKIT_OUTPUT')
 ENV.delete('VAGRANT_KEY')
 ENV.delete('SERVERS')
 ENV.delete('REPORT_PROGRESS')
+ENV.delete('PROGRESS_BASE')
 
 case command
 when "setup", "deploy"
@@ -43,6 +44,9 @@ when "setup", "deploy"
     end
     opts.on("--progress") do
       ENV['REPORT_PROGRESS'] = '1'
+    end
+    opts.on("--progress-base NUMBER", Float) do |val|
+      ENV['PROGRESS_BASE'] = val.to_s
     end
   end
   begin

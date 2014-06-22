@@ -16,7 +16,7 @@ Onepush.set_manifest_defaults(MANIFEST)
 ABOUT = MANIFEST['about']
 SETUP = MANIFEST['setup']
 
-TOTAL_STEPS = 12.0
+TOTAL_STEPS = 12
 
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.
@@ -85,51 +85,45 @@ task :restart_services => :install_essentials do
   end
 end
 
-def report_progress(fraction)
-  if ENV['REPORT_PROGRESS']
-    puts "PROGRS -- #{fraction}"
-  end
-end
-
 desc "Setup the server environment"
 task :setup do
-  report_progress(1 / TOTAL_STEPS)
+  report_progress(1, TOTAL_STEPS)
   invoke :autodetect_os
-  report_progress(2 / TOTAL_STEPS)
+  report_progress(2, TOTAL_STEPS)
 
   invoke :install_essentials
-  report_progress(3 / TOTAL_STEPS)
+  report_progress(3, TOTAL_STEPS)
 
   invoke :install_language_runtime
-  report_progress(4 / TOTAL_STEPS)
+  report_progress(4, TOTAL_STEPS)
 
   invoke :install_passenger
-  report_progress(5 / TOTAL_STEPS)
+  report_progress(5, TOTAL_STEPS)
 
   invoke :install_web_server
-  report_progress(6 / TOTAL_STEPS)
+  report_progress(6, TOTAL_STEPS)
 
   invoke :create_app_user
   invoke :create_app_dir
-  report_progress(7 / TOTAL_STEPS)
+  report_progress(7, TOTAL_STEPS)
 
   invoke :install_dbms
-  report_progress(8 / TOTAL_STEPS)
+  report_progress(8, TOTAL_STEPS)
 
   setup_database(SETUP['database_type'], SETUP['database_name'],
     SETUP['database_user'])
   create_app_database_config(SETUP['app_dir'], SETUP['user'],
     SETUP['database_type'], SETUP['database_name'],
     SETUP['database_user'])
-  report_progress(9 / TOTAL_STEPS)
+  report_progress(9, TOTAL_STEPS)
 
   invoke :create_app_vhost
-  report_progress(10 / TOTAL_STEPS)
+  report_progress(10, TOTAL_STEPS)
 
   invoke :install_onepush_manifest
-  report_progress(11 / TOTAL_STEPS)
+  report_progress(11, TOTAL_STEPS)
   invoke :restart_services
-  report_progress(12 / TOTAL_STEPS)
+  report_progress(12, TOTAL_STEPS)
 
   notice "Finished."
 end

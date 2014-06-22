@@ -107,46 +107,46 @@ namespace :deploy do
 
   before :starting, :report_progress_starting do
     notice "Running sanity checks..."
-    report_progress(1 / TOTAL_STEPS)
+    report_progress(1, TOTAL_STEPS)
   end
 
   before :updating, :report_progress_updating do
     notice "Copying files for new release..."
-    report_progress(2 / TOTAL_STEPS)
+    report_progress(2, TOTAL_STEPS)
   end
 
   before '^bundler:install', :report_progress_bundle_install do
     notice "Installing gem bundle..."
-    report_progress(3 / TOTAL_STEPS)
+    report_progress(3, TOTAL_STEPS)
   end
 
   before :compile_assets, :report_progress_compile_assets do
     notice "Compiling assets..."
-    report_progress(4 / TOTAL_STEPS)
+    report_progress(4, TOTAL_STEPS)
   end
 
   before :normalize_assets, :report_progress_normalize_assets do
     notice "Normalizing assets..."
-    report_progress(5 / TOTAL_STEPS)
+    report_progress(5, TOTAL_STEPS)
   end
 
   before :migrate, :report_progress_migrate do
     notice "Running database migrations..."
-    report_progress(6 / TOTAL_STEPS)
+    report_progress(6, TOTAL_STEPS)
   end
 
   before :reverting, :report_progress_reverting do
     notice "Reverting to previous release..."
-    report_progress((TOTAL_STEPS - 1) / TOTAL_STEPS)
+    report_progress((TOTAL_STEPS - 1), TOTAL_STEPS)
   end
 
   before :finishing, :report_progress_finishing do
     notice "Finalizing release..."
-    report_progress((TOTAL_STEPS - 1) / TOTAL_STEPS)
+    report_progress((TOTAL_STEPS - 1), TOTAL_STEPS)
   end
 
   after :finished, :report_progress_finished do
     notice "Finished!"
-    report_progress(1)
+    report_progress(TOTAL_STEPS, TOTAL_STEPS)
   end
 end
