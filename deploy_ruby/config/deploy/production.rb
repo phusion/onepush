@@ -6,7 +6,7 @@ JSON.parse(ENV['SERVERS']).each do |address|
   uri = URI.parse("scheme://#{address}")
   hostname = uri.hostname.dup
   hostname << ":#{uri.port}" if uri.port
-  server(hostname, :user => uri.user || "root", :roles => ['app', 'db'])
+  server(hostname, :user => uri.user || "root", :roles => ['web', 'app', 'db'])
 end
 
 keys = []

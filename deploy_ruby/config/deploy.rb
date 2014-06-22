@@ -1,5 +1,5 @@
-# Default value for :linked_files is []
 set :linked_files, %w{config/database.yml config/secrets.yml}
+set :linked_dirs, %w{log tmp vendor/bundle public/system}
 
 namespace :deploy do
   # Override migrate task from capistrano-rails.

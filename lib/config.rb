@@ -13,7 +13,8 @@ module Onepush
   CHANGEABLE_PROPERTIES = %w(
     type
     domain_names
-    addons
+    memcached
+    redis
     ruby_version
     ruby_manager
     database_type
@@ -38,6 +39,8 @@ module Onepush
       set_boolean_default(manifest, 'install_web_server', true)
       set_boolean_default(manifest, 'install_common_ruby_app_dependencies', true)
 
+      set_boolean_default(manifest, 'memcached', false)
+      set_boolean_default(manifest, 'redis', false)
       manifest['ruby_manager'] ||= 'rvm'
       manifest['web_server_type'] ||= 'nginx'
 

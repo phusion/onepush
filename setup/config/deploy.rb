@@ -115,7 +115,7 @@ task :setup do
     MANIFEST['database_user'])
   report_progress(9, TOTAL_STEPS)
 
-  invoke :install_addons
+  invoke :install_additional_services
   report_progress(10, TOTAL_STEPS)
 
   invoke :create_app_vhost
