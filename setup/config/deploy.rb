@@ -16,7 +16,7 @@ Onepush.set_manifest_defaults(MANIFEST)
 ABOUT = MANIFEST['about']
 SETUP = MANIFEST['setup']
 
-TOTAL_STEPS = 12
+TOTAL_STEPS = 13
 
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.
@@ -117,13 +117,16 @@ task :setup do
     SETUP['database_user'])
   report_progress(9, TOTAL_STEPS)
 
-  invoke :create_app_vhost
+  invoke :install_addons
   report_progress(10, TOTAL_STEPS)
 
-  invoke :install_onepush_manifest
+  invoke :create_app_vhost
   report_progress(11, TOTAL_STEPS)
-  invoke :restart_services
+
+  invoke :install_onepush_manifest
   report_progress(12, TOTAL_STEPS)
+  invoke :restart_services
+  report_progress(13, TOTAL_STEPS)
 
   notice "Finished."
 end

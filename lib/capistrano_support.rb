@@ -403,4 +403,7 @@ def _check_server_setup(host)
   if !test("#{rvm_path}/bin/rvm #{ruby_version} do ruby --version")
     fatal_and_abort "Your app requires #{ruby_version}, but it isn't installed yet. Please run 'onepush setup'."
   end
+
+  # TODO: check whether the wrapper script created by 'onepush setup'
+  # matches the Ruby version
 end
