@@ -14,8 +14,11 @@ task :create_app_user => :install_essentials do
       end
     end
 
-    authorized_keys_file = sudo_capture(host, "cat /home/#{name}/.ssh/authorized_keys " +
-      "2>/dev/null; true")
+    if sudo_test(host, "[[ -e /home/#{name}/.ssh/authorized_keys ]]")
+      authorized_keys_file = sudo_download_to_string(host, "/home/#{name}/.ssh/authorized_keys")
+    else
+      authorized_keys_file = ""
+    end
     authorized_keys = authorized_keys_file.split("\n", -1)
     add_pubkey_to_array(authorized_keys, "~/.ssh/id_rsa.pub")
     add_pubkey_to_array(authorized_keys, "~/.ssh/id_dsa.pub")
@@ -25,10 +28,11 @@ task :create_app_user => :install_essentials do
       io.rewind
 
       sudo(host, "mkdir -p /home/#{name}/.ssh")
-      sudo_upload(host, io, "/home/#{name}/.ssh/authorized_keys")
-      sudo(host, "chown #{name}: /home/#{name}/.ssh /home/#{name}/.ssh/authorized_keys && " +
-        "chmod 700 /home/#{name}/.ssh && " +
-        "chmod 644 /home/#{name}/.ssh/authorized_keys")
+      sudo_upload(host, io, "/home/#{name}/.ssh/authorized_keys",
+        :chown => "#{name}:",
+        :chmod => 644)
+      sudo(host, "chown #{name}: /home/#{name}/.ssh && " +
+        "chmod 700 /home/#{name}/.ssh")
     end
   end
 end

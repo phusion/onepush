@@ -34,12 +34,12 @@ def install_rvm(host)
 
   if !test("[[ -h /usr/local/rvm/rubies/default ]]")
     rubies = capture("ls -1d /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
-    rubies = rubies.split("\n").map { |x| File.basename(x) }.sort
+    rubies = rubies.split(/\r?\n/).map { |x| File.basename(x) }.sort
     if rubies.empty?
       info "Installing Ruby interpreter: latest version"
       sudo(host, "/usr/local/rvm/bin/rvm install ruby")
       rubies = capture("ls -1d /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
-      rubies = rubies.split("\n").map { |x| File.basename(x) }.sort
+      rubies = rubies.split(/\r?\n/).map { |x| File.basename(x) }.sort
     end
     sudo(host, "/bin/bash -lc 'rvm --default #{rubies.last}'")
   end

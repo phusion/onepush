@@ -90,13 +90,28 @@ def sudo_capture(host, command)
 end
 
 def sudo_download(host, path, io)
-  io.write(sudo_capture(host, "cat #{path}"))
+  mktempdir(host) do |tmpdir|
+    e_tmpdir = Shellwords.escape(tmpdir)
+    e_path = Shellwords.escape(path)
+    username = host.user || "root"
+    sudo(host, "cp #{e_path} #{e_tmpdir}/file && chown #{username}: #{e_tmpdir} #{e_tmpdir}/file")
+    download!("#{tmpdir}/file", io)
+  end
 end
 
-def sudo_upload(host, io, path)
+def sudo_download_to_string(host, path)
+  io = StringIO.new
+  io.binmode
+  sudo_download(host, path, io)
+  io.string
+end
+
+def sudo_upload(host, io, path, options = {})
   mktempdir(host) do |tmpdir|
+    chown = options[:chown] || "root:"
+    chmod = options[:chmod] || "600"
     upload!(io, "#{tmpdir}/file")
-    sudo(host, "chown root: #{tmpdir}/file && mv #{tmpdir}/file #{path}")
+    sudo(host, "chown #{chown} #{tmpdir}/file && chmod #{chmod} #{tmpdir}/file && mv #{tmpdir}/file #{path}")
   end
 end
 
@@ -208,13 +223,13 @@ def check_packages_installed(host, names)
   case host.properties.fetch(:os_class)
   when :redhat
     installed = capture("rpm -q #{names.join(' ')} 2>&1 | grep 'is not installed$'; true")
-    not_installed = installed.split("\n").map { |x| x.sub(/^package (.+) is not installed$/, '\1') }
+    not_installed = installed.split(/\r?\n/).map { |x| x.sub(/^package (.+) is not installed$/, '\1') }
     names.each do |name|
       result[name] = !not_installed.include?(name)
     end
   when :debian
     installed = capture("dpkg-query -s #{names.join(' ')} 2>/dev/null | grep '^Package: '; true")
-    installed = installed.gsub(/^Package: /, '').split("\n")
+    installed = installed.gsub(/^Package: /, '').split(/\r?\n/)
     names.each do |name|
       result[name] = installed.include?(name)
     end
@@ -246,7 +261,7 @@ def autodetect_nginx(host)
       result[:restart_command] = "/etc/init.d/nginx restart"
       result
     else
-      files = capture("ls -1 /opt/*/*/nginx 2>/dev/null", :raise_on_non_zero_exit => false).split("\n")
+      files = capture("ls -1 /opt/*/*/nginx 2>/dev/null", :raise_on_non_zero_exit => false).split(/\r?\n/)
       if files.any?
         result[:binary] = files[0]
         result[:config_file] = File.absolute_path(File.dirname(files[0]) + "/../conf/nginx.conf")

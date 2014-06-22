@@ -4,7 +4,7 @@ task :autodetect_os do
     if test("[[ -e /etc/redhat-release || -e /etc/centos-release ]]")
       host.set(:os_class, :redhat)
 
-      info = capture("cat /etc/redhat-release")
+      info = capture("cat /etc/redhat-release").gsub("\r\n", "\n")
       info =~ /release (.+?) /
       distro_version = $1
       if distro_version
@@ -33,10 +33,11 @@ task :autodetect_os do
         fatal_and_abort "Onepush only supports Red Hat, CentOS and Amazon Linux, not any other Red Hat derivatives."
       end
 
-    elsif test("[[ -e /etc/system-release ]]") && (info = capture("/etc/system-release")) =~ /Amazon/
+    elsif test("[[ -e /etc/system-release ]]") && (info = capture("cat /etc/system-release")) =~ /Amazon/
       host.set(:os_class, :redhat)
       host.set(:os, :amazon_linux)
 
+      info.gsub!("\r\n", "\n")
       info =~ /release (.+?) /
       distro_version = $1
       if distro_version
@@ -51,6 +52,7 @@ task :autodetect_os do
       apt_get_install(host, %w(lsb-release))
 
       lsb_info = capture("lsb_release -a")
+      lsb_info.gsub!("\r\n", "\n")
       lsb_info =~ /Release:(.*)/
       distro_version = $1.strip
       lsb_info =~ /Distributor ID:(.*)/

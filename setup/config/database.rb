@@ -66,7 +66,7 @@ def setup_database(type, name, user)
       end
 
       databases = sudo_capture(host, "cd / && sudo -u postgres -H psql postgres -lqt | cut -d \\| -f 1")
-      if databases !~ /^ *#{Regexp.escape name} *$/
+      if databases !~ /^ *#{Regexp.escape name} *\r?$/
         sudo(host, "cd / && sudo -u postgres -H createdb --no-password --owner #{user} #{name}")
       end
     else
