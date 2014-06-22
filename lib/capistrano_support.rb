@@ -393,8 +393,8 @@ def _check_server_setup(host)
   manifest = JSON.parse(io.string)
   set(:onepush_setup, manifest)
 
-  if manifest['setup']['ruby_version']
-    set :rvm_ruby_version, manifest['setup']['ruby_version']
+  if MANIFEST['about']['ruby_version']
+    set :rvm_ruby_version, MANIFEST['about']['ruby_version']
   end
 
   invoke 'rvm:hook'
