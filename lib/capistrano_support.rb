@@ -59,19 +59,14 @@ end
 
 
 def check_manifest_requirements(manifest)
-  if !manifest['about']
-    fatal_and_abort("There must be an 'about' section in the manifest")
-  end
   ['id', 'type', 'domain_names'].each do |key|
-    if !manifest['about'][key]
-      fatal_and_abort("The '#{key}' option must be set in the 'about' section")
+    if !manifest[key]
+      fatal_and_abort("The '#{key}' option must be set")
     end
   end
-  if setup = manifest['setup']
-    if setup['passenger_enterprise'] && !setup['passenger_enterprise_download_token']
-      fatal_and_abort("If you set passenger_enterprise to true, then you must also " +
-        "set passenger_enterprise_download_token")
-    end
+  if manifest['passenger_enterprise'] && !manifest['passenger_enterprise_download_token']
+    fatal_and_abort("If you set passenger_enterprise to true, then you must also " +
+      "set passenger_enterprise_download_token")
   end
 end
 
@@ -334,7 +329,7 @@ end
 
 def autodetect_ruby_interpreter_for_passenger(host)
   cache(host, :ruby) do
-    if MANIFEST['about']['type'] == 'ruby'
+    if MANIFEST['type'] == 'ruby'
       # Since install_passenger_source_dependencies installs RVM
       # if the language is Ruby (and thus, does not install Rake
       # through the OS package manager), we must give RVM precedence
@@ -377,10 +372,10 @@ end
 
 
 def _check_server_setup(host)
-  id = MANIFEST['about']['id']
-
+  id = MANIFEST['id']
   set :application, id
 
+  # Infer app dir
   app_dir = capture("readlink /etc/onepush/apps/#{id}; true").strip
   if app_dir.empty?
     fatal_and_abort "The server has not been setup for your app yet. Please run 'onepush setup'."
@@ -388,15 +383,16 @@ def _check_server_setup(host)
   set(:deploy_to, app_dir)
   set(:repo_url, "#{app_dir}/onepush_repo")
 
+  # Download previous setup manifest
   io = StringIO.new
   download!("#{app_dir}/onepush-setup.json", io)
-  manifest = JSON.parse(io.string)
-  set(:onepush_setup, manifest)
+  server_manifest = JSON.parse(io.string)
+  set(:onepush_manifest, server_manifest)
 
-  if MANIFEST['about']['ruby_version']
-    set :rvm_ruby_version, MANIFEST['about']['ruby_version']
+  # Check whether the requested Ruby version is installed
+  if MANIFEST['ruby_version']
+    set :rvm_ruby_version, MANIFEST['ruby_version']
   end
-
   invoke 'rvm:hook'
   rvm_path = fetch(:rvm_path)
   ruby_version = fetch(:rvm_ruby_version)
@@ -404,6 +400,13 @@ def _check_server_setup(host)
     fatal_and_abort "Your app requires #{ruby_version}, but it isn't installed yet. Please run 'onepush setup'."
   end
 
-  # TODO: check whether the wrapper script created by 'onepush setup'
-  # matches the Ruby version
+  # Check whether anything else has been changed, and thus requires
+  # a new 'onepush setup' call
+  Onepush::CHANGEABLE_PROPERTIES.each do |name|
+    if MANIFEST[name] != server_manifest[name]
+      fatal_and_abort "You've changed your app's Onepush configuration ('#{name}' " +
+        "changed from '#{server_manifest[name]}' to '#{MANIFEST[name]}'). " +
+        "Please run 'onepush setup' first before deploying."
+    end
+  end
 end

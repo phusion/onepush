@@ -1,7 +1,7 @@
 task :install_web_server => [:install_essentials, :install_passenger] do
-  if SETUP['install_web_server']
+  if MANIFEST['install_web_server']
     notice "Installing web server..."
-    case SETUP['web_server_type']
+    case MANIFEST['web_server_type']
     when 'nginx'
       install_nginx
       enable_passenger_nginx
@@ -63,7 +63,7 @@ def install_nginx_from_source_with_passenger(host)
 end
 
 def enable_passenger_nginx
-  if SETUP['install_passenger']
+  if MANIFEST['install_passenger']
     on roles(:app) do |host|
       config_file      = autodetect_nginx!(host)[:config_file]
       passenger_info   = autodetect_passenger!(host)
@@ -102,7 +102,7 @@ def enable_passenger_nginx
 end
 
 def install_onepush_nginx_vhosts
-  if SETUP['install_web_server']
+  if MANIFEST['install_web_server']
     on roles(:app) do |host|
       config_file = autodetect_nginx!(host)[:config_file]
       include_directive = "include /etc/onepush/apps/*/shared/config/nginx-vhost.conf;"
@@ -198,7 +198,7 @@ def install_apache
     end
   end
 
-  if SETUP['install_passenger']
+  if MANIFEST['install_passenger']
     install_passenger_apache_module
   end
 end

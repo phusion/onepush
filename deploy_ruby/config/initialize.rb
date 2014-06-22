@@ -10,8 +10,6 @@ fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MAN
 MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
-ABOUT = MANIFEST['about']
-SETUP = MANIFEST['setup']
 
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.
@@ -51,7 +49,7 @@ end
 #   https://github.com/capistrano/bundler
 #   https://github.com/capistrano/rails
 
-case SETUP['ruby_manager']
+case MANIFEST['ruby_manager']
 when 'rvm'
   require 'capistrano/rvm'
 when 'rbenv'

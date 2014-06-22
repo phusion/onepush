@@ -22,9 +22,9 @@ namespace :deploy do
   desc 'Sanity check codebase'
   task :check_codebase do
     gemfile_lock = `git show HEAD:Gemfile.lock`
-    setup = fetch(:onepush_setup)['setup']
+    manifest = fetch(:onepush_manifest)
 
-    case setup['database_type']
+    case manifest['database_type']
     when 'postgresql'
       if gemfile_lock !~ / pg /
         fatal_and_abort "Onepush uses PostgreSQL as database. However, your " +

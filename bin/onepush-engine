@@ -71,7 +71,7 @@ when "setup", "deploy"
   else
     ENV['APP_ROOT'] = PWD
     Dir.chdir("#{ROOT}/deploy_ruby")
-    exec("bundle", "exec", "cap", "vagrant", "deploy")
+    exec("bundle", "exec", "cap", "production", "deploy")
   end
 
 else

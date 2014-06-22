@@ -13,8 +13,6 @@ fatal_and_abort "The PWD option must be set" if !ENV['PWD']
 MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
-ABOUT = MANIFEST['about']
-SETUP = MANIFEST['setup']
 
 TOTAL_STEPS = 13
 
@@ -34,18 +32,18 @@ end
 
 task :install_onepush_manifest => :install_essentials do
   notice "Saving setup information..."
-  id      = ABOUT['id']
-  app_dir = SETUP['app_dir']
+  id      = MANIFEST['id']
+  app_dir = MANIFEST['app_dir']
 
   config = StringIO.new
   config.puts JSON.dump(MANIFEST)
   config.rewind
 
   on roles(:app) do |host|
-    user = SETUP['user']
-    sudo_upload(host, config, "#{app_dir}/onepush-setup.json")
-    sudo(host, "chown #{user}: #{app_dir}/onepush-setup.json && " +
-      "chmod 600 #{app_dir}/onepush-setup.json")
+    user = MANIFEST['user']
+    sudo_upload(host, config, "#{app_dir}/onepush-setup.json",
+      :chown => "#{user}:",
+      :chmod => "600")
     sudo(host, "mkdir -p /etc/onepush/apps && " +
       "cd /etc/onepush/apps && " +
       "rm -f #{id} && " +
@@ -65,7 +63,7 @@ task :restart_services => :install_essentials do
   on roles(:app) do |host|
     if test("sudo test -e /var/run/onepush/restart_web_server")
       sudo(host, "rm -f /var/run/onepush/restart_web_server")
-      case SETUP['web_server_type']
+      case MANIFEST['web_server_type']
       when 'nginx'
         nginx_info = autodetect_nginx!(host)
         sudo(host, nginx_info[:configtest_command])
@@ -110,11 +108,11 @@ task :setup do
   invoke :install_dbms
   report_progress(8, TOTAL_STEPS)
 
-  setup_database(SETUP['database_type'], SETUP['database_name'],
-    SETUP['database_user'])
-  create_app_database_config(SETUP['app_dir'], SETUP['user'],
-    SETUP['database_type'], SETUP['database_name'],
-    SETUP['database_user'])
+  setup_database(MANIFEST['database_type'], MANIFEST['database_name'],
+    MANIFEST['database_user'])
+  create_app_database_config(MANIFEST['app_dir'], MANIFEST['user'],
+    MANIFEST['database_type'], MANIFEST['database_name'],
+    MANIFEST['database_user'])
   report_progress(9, TOTAL_STEPS)
 
   invoke :install_addons
