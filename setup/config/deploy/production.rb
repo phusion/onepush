@@ -1,8 +1,8 @@
 require 'json'
 require 'uri'
 
-abort "At least one server must be specified" if !ENV['SERVERS']
-JSON.parse(ENV['SERVERS']).each do |address|
+abort "At least one setup address must be specified" if !ENV['SETUP_ADDRESSES']
+JSON.parse(ENV['SETUP_ADDRESSES']).each do |address|
   uri = URI.parse("scheme://#{address}")
   hostname = uri.hostname.dup
   hostname << ":#{uri.port}" if uri.port

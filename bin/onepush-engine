@@ -20,10 +20,12 @@ ENV.delete('VAGRANT_KEY')
 ENV.delete('SERVERS')
 ENV.delete('REPORT_PROGRESS')
 ENV.delete('PROGRESS_BASE')
+ENV.delete('PROGRESS_CEIL')
 
 case command
 when "setup", "deploy"
-  servers = []
+  setup_addresses = []
+  deploy_addresses = []
   ssh_keys = []
 
   parser = OptionParser.new do |opts|
@@ -37,8 +39,13 @@ when "setup", "deploy"
     opts.on("--manifest-json JSON", String) do |json|
       ENV['MANIFEST_JSON'] = json
     end
-    opts.on("--server ADDRESS", String) do |address|
-      servers << address
+    opts.on("--setup-address ADDRESS", String) do |address|
+      setup_addresses << address
+    end
+    if command == "deploy"
+      opts.on("--deploy-address ADDRESS", String) do |address|
+        deploy_addresses << address
+      end
     end
     opts.on("--ssh-log FILENAME", String) do |filename|
       ENV['SSHKIT_OUTPUT'] = filename
@@ -65,18 +72,23 @@ when "setup", "deploy"
     exit 1
   end
 
-  if servers.empty?
-    abort "Please specify at least one --server."
+  if setup_addresses.empty?
+    abort "Please specify at least one --setup-address."
+  end
+  if command == "deploy" && deploy_addresses.empty?
+    abort "Please specify at least one --deploy-address."
   end
 
-  ENV['SERVERS'] = JSON.generate(servers)
+  ENV['SETUP_ADDRESSES'] = JSON.generate(setup_addresses)
+  if command == "deploy"
+    ENV['DEPLOY_ADDRESSES'] = JSON.generate(deploy_addresses)
+  end
   ENV['SSH_KEYS'] = JSON.generate(ssh_keys)
+  ENV['APP_ROOT'] = PWD
   if command == "setup"
-    ENV['PWD'] = PWD
     Dir.chdir("#{ROOT}/setup")
     exec("bundle", "exec", "cap", "production", "setup")
   else
-    ENV['APP_ROOT'] = PWD
     Dir.chdir("#{ROOT}/deploy_ruby")
     exec("bundle", "exec", "cap", "production", "deploy")
   end

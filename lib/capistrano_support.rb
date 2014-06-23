@@ -1,8 +1,11 @@
 require_relative './my_pretty_formatter'
 
+ROOT = File.absolute_path(File.dirname(__FILE__) + "/..")
 LOGGER = Logger.new(STDOUT)
 REPORT_PROGRESS = ENV['REPORT_PROGRESS']
-PROGRESS_BASE = ENV.fetch('PROGRESS_BASE', 0).to_f
+$progress_base = ENV.fetch('PROGRESS_BASE', 0).to_f
+$progress_ceil = ENV.fetch('PROGRESS_CEIL', 1).to_f
+$current_progress = 0
 
 def log_sshkit(level, message)
   case level
@@ -52,8 +55,9 @@ end
 
 def report_progress(step, total)
   if REPORT_PROGRESS
-    fraction = (step / total.to_f) * (1.0 - PROGRESS_BASE)
-    puts "PROGRS -- #{PROGRESS_BASE + fraction}"
+    fraction = (step / total.to_f) * ($progress_ceil - $progress_base)
+    $current_progress = $progress_base + fraction
+    puts "PROGRS -- #{$current_progress}"
   end
 end
 
@@ -419,13 +423,37 @@ end
 
 
 def _check_server_setup(host)
+  notice "Checking server setup..."
+  report_progress(1, TOTAL_STEPS)
+
+  if !check_server_setup_and_return_result(host)
+    notice "Configuration changed. Re-setting up server..."
+    env = ENV.to_hash.dup
+    env["PROGRESS_BASE"] = $current_progress.to_s
+    env["PROGRESS_CEIL"] = "0.5"
+    if ENV["SSHKIT_OUTPUT"]
+      env["SSHKIT_OUTPUT"] = ENV["SSHKIT_OUTPUT"]
+    end
+    if !system(env, "bundle", "exec", "cap", "production", "setup", :chdir => "#{ROOT}/setup")
+      # Abort without printing backtrace.
+      exit!
+    end
+    $progress_base = 0.5
+
+    if !check_server_setup_and_return_result(host)
+      fatal_and_abort "The server must be re-setup. Please run 'onepush setup'."
+    end
+  end
+end
+
+def check_server_setup_and_return_result(host)
   id = MANIFEST['id']
   set :application, id
 
   # Infer app dir
   app_dir = capture("readlink /etc/onepush/apps/#{id}; true").strip
   if app_dir.empty?
-    fatal_and_abort "The server has not been setup for your app yet. Please run 'onepush setup'."
+    return false
   end
   set(:deploy_to, app_dir)
   set(:repo_url, "#{app_dir}/onepush_repo")
@@ -440,19 +468,21 @@ def _check_server_setup(host)
   if MANIFEST['ruby_version']
     set :rvm_ruby_version, MANIFEST['ruby_version']
   end
+  Rake::Task['rvm:hook'].reenable
   invoke 'rvm:hook'
   rvm_path = fetch(:rvm_path)
   ruby_version = fetch(:rvm_ruby_version)
   if !test("#{rvm_path}/bin/rvm #{ruby_version} do ruby --version")
-    fatal_and_abort "Your app requires #{ruby_version}, but it isn't installed yet. Please run 'onepush setup'."
+    return false
   end
 
   # Check whether anything else has been changed, and thus requires
   # a new 'onepush setup' call
   Onepush::CHANGEABLE_PROPERTIES.each do |name|
     if MANIFEST[name] != server_manifest[name]
-      fatal_and_abort "You've changed your app's Onepush configuration ('#{name}' " +
-        "changed). Please run 'onepush setup' first before deploying."
+      return false
     end
   end
+
+  true
 end

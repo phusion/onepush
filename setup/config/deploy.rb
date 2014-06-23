@@ -7,8 +7,8 @@ require 'net/https'
 require_relative '../../lib/config'
 require_relative '../../lib/version'
 
+fatal_and_abort "The APP_ROOT option must be set" if !ENV['APP_ROOT']
 fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MANIFEST_JSON']
-fatal_and_abort "The PWD option must be set" if !ENV['PWD']
 
 MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
@@ -22,7 +22,7 @@ set :pty, true
 
 
 after :production, :initialize_onepush do
-  Dir.chdir(ENV['PWD'])
+  Dir.chdir(ENV['APP_ROOT'])
   initialize_onepush_capistrano
   on roles(:app, :db) do |host|
     notice "Setting up server: #{host}"

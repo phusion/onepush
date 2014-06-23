@@ -30,8 +30,6 @@ namespace :deploy do
   # file.
   task :check_server_setup do
     on roles(:app) do |host|
-      notice "Checking server setup..."
-      report_progress(1, TOTAL_STEPS)
       _check_server_setup(host)
     end
   end
