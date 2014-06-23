@@ -14,6 +14,8 @@ ARGV.shift
 
 ENV.delete('MANIFEST_JSON')
 ENV.delete('SSHKIT_OUTPUT')
+ENV.delete('INSTALL_PUBKEYS')
+ENV.delete('SSH_KEYS')
 ENV.delete('VAGRANT_KEY')
 ENV.delete('SERVERS')
 ENV.delete('REPORT_PROGRESS')
@@ -22,6 +24,7 @@ ENV.delete('PROGRESS_BASE')
 case command
 when "setup", "deploy"
   servers = []
+  ssh_keys = []
 
   parser = OptionParser.new do |opts|
     opts.banner = "Usage: onepush #{command} [options]"
@@ -40,7 +43,10 @@ when "setup", "deploy"
     opts.on("--ssh-log FILENAME", String) do |filename|
       ENV['SSHKIT_OUTPUT'] = filename
     end
-    opts.on("--vagrant-key") do
+    opts.on("--ssh-key FILENAME", String, "Private key to use for SSH connection") do |filename|
+      ssh_keys << filename
+    end
+    opts.on("--vagrant-key", "Use Vagrant insecure private key for SSH connection") do
       ENV['VAGRANT_KEY'] = '1'
     end
     opts.on("--progress") do
@@ -64,6 +70,7 @@ when "setup", "deploy"
   end
 
   ENV['SERVERS'] = JSON.generate(servers)
+  ENV['SSH_KEYS'] = JSON.generate(ssh_keys)
   if command == "setup"
     ENV['PWD'] = PWD
     Dir.chdir("#{ROOT}/setup")

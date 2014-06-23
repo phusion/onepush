@@ -355,13 +355,60 @@ def autodetect_ruby_interpreter_for_passenger(host)
   end
 end
 
-
 def autodetect_ruby_interpreter_for_passenger!(host)
   autodetect_ruby_interpreter_for_passenger(host) || \
     fatal_and_abort("Unable to find a Ruby interpreter on the system. This is probably " +
       "a bug in Onepush. Please report this to the authors.")
 end
 
+
+def edit_section_in_string(str, section_name, content)
+  section_begin_str = "###### BEGIN #{section_name} ######"
+  section_end_str   = "###### END #{section_name} ######"
+
+  lines = str.split("\n", -1)
+  content.chomp!
+
+  start_index = lines.find_index(section_begin_str)
+  if !start_index
+    # Section is not in file.
+    return if content.empty?
+    lines << section_begin_str
+    lines << content
+    lines << section_end_str
+  else
+    end_index = start_index + 1
+    while end_index < lines.size && lines[end_index] != section_end_str
+      end_index += 1
+    end
+    if end_index == lines.size
+      # End not found. Pretend like the section is empty.
+      end_index = start_index
+    end
+    lines.slice!(start_index, end_index - start_index + 1)
+    if !content.empty?
+      lines.insert(start_index, section_begin_str, content, section_end_str)
+    end
+  end
+
+  if lines.last && lines.last.empty?
+    lines.pop
+  end
+  lines.join("\n") << "\n"
+end
+
+def sudo_edit_section(host, path, section_name, content, options)
+  if sudo_test(host, "[[ -e #{path} ]]")
+    str = sudo_download_to_string(host, path)
+  else
+    str = ""
+  end
+  io = StringIO.new
+  io.binmode
+  io.write(edit_section_in_string(str, section_name, content))
+  io.rewind
+  sudo_upload(host, io, path, options)
+end
 
 def check_file_change(host, path)
   md5_old = sudo_capture(host, "md5sum #{path} 2>/dev/null; true").strip
@@ -405,8 +452,7 @@ def _check_server_setup(host)
   Onepush::CHANGEABLE_PROPERTIES.each do |name|
     if MANIFEST[name] != server_manifest[name]
       fatal_and_abort "You've changed your app's Onepush configuration ('#{name}' " +
-        "changed from '#{server_manifest[name]}' to '#{MANIFEST[name]}'). " +
-        "Please run 'onepush setup' first before deploying."
+        "changed). Please run 'onepush setup' first before deploying."
     end
   end
 end

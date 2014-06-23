@@ -15,6 +15,7 @@ module Onepush
   CHANGEABLE_PROPERTIES = %w(
     type
     domain_names
+    deployment_ssh_keys
     memcached
     redis
     ruby_version
