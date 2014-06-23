@@ -30,10 +30,10 @@ after :production, :initialize_onepush do
 end
 
 
-task :run_postinstall => :install_essentials do
-  notice "Running post-installation scripts..."
+task :run_postsetup => :install_essentials do
+  notice "Running post-setup scripts..."
   on roles(:app, :db) do |host|
-    MANIFEST['postinstall_script'].each do |script|
+    MANIFEST['postsetup_script'].each do |script|
       sudo(host, script, :pipefail => false)
     end
   end
@@ -130,7 +130,7 @@ task :setup do
   invoke :create_app_vhost
   report_progress(11, TOTAL_STEPS)
 
-  invoke :run_postinstall
+  invoke :run_postsetup
   report_progress(12, TOTAL_STEPS)
 
   invoke :install_onepush_manifest

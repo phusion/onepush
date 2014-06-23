@@ -23,7 +23,7 @@ module Onepush
     database_type
     database_name
     database_user
-    postinstall_script
+    postsetup_script
   ).freeze
 
   TEMPORARY_PROPERTIES = %w(
@@ -43,7 +43,7 @@ module Onepush
       manifest['user'] ||= manifest['id']
       manifest['app_dir'] ||= "/var/www/#{manifest['id']}"
       manifest['deployment_ssh_keys'] ||= []
-      manifest['postinstall_script'] ||= []
+      manifest['postsetup_script'] ||= []
 
       manifest['database_type'] ||= 'postgresql'
       manifest['database_name'] ||= manifest['id']
