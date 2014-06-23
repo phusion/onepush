@@ -20,6 +20,7 @@ task :create_app_user => :install_essentials do
       authorized_keys_file = ""
     end
     authorized_keys = authorized_keys_file.split("\n", -1)
+    # TODO: allow user to upload public key
     add_pubkey_to_array(authorized_keys, "~/.ssh/id_rsa.pub")
     add_pubkey_to_array(authorized_keys, "~/.ssh/id_dsa.pub")
     if authorized_keys.join("\n").strip != authorized_keys_file.strip

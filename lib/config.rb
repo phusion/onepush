@@ -1,6 +1,8 @@
 require_relative 'version'
 
 module Onepush
+  # Properties that are used when a server is setup for the first time,
+  # but which will have no effect on subsequent setup calls.
   UNCHANGEABLE_PROPERTIES = %w(
     id
     web_server_type
@@ -22,9 +24,17 @@ module Onepush
     database_user
   ).freeze
 
+  TEMPORARY_PROPERTIES = %w(
+    install_passenger
+    install_web_server
+    install_common_ruby_app_dependencies
+  )
+
   ALL_PROPERTIES =
     (UNCHANGEABLE_PROPERTIES +
-    CHANGEABLE_PROPERTIES).freeze
+    CHANGEABLE_PROPERTIES +
+    TEMPORARY_PROPERTIES +
+    ['id']).freeze
 
   class << self
     def set_manifest_defaults(manifest)
