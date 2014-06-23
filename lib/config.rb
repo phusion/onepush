@@ -23,6 +23,7 @@ module Onepush
     database_type
     database_name
     database_user
+    postinstall_script
   ).freeze
 
   TEMPORARY_PROPERTIES = %w(
@@ -41,6 +42,8 @@ module Onepush
     def set_manifest_defaults(manifest)
       manifest['user'] ||= manifest['id']
       manifest['app_dir'] ||= "/var/www/#{manifest['id']}"
+      manifest['deployment_ssh_keys'] ||= []
+      manifest['postinstall_script'] ||= []
 
       manifest['database_type'] ||= 'postgresql'
       manifest['database_name'] ||= manifest['id']

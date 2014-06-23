@@ -18,11 +18,7 @@ task :create_app_user => :install_essentials do
     sudo(host, "chown #{name}: /home/#{name}/.ssh && " +
       "chmod 700 /home/#{name}/.ssh")
 
-    if MANIFEST['deployment_ssh_keys']
-      keys = MANIFEST['deployment_ssh_keys'].join("\n")
-    else
-      keys = ""
-    end
+    keys = MANIFEST['deployment_ssh_keys'].join("\n")
     sudo_edit_section(host, "/home/#{name}/.ssh/authorized_keys",
       "ONEPUSH KEYS", keys, :chown => "#{name}:", :chmod => 700)
   end

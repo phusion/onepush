@@ -85,8 +85,8 @@ def initialize_onepush_capistrano
 end
 
 
-def sudo(host, command)
-  execute(wrap_in_sudo(host, command))
+def sudo(host, command, options = {})
+  execute(wrap_in_sudo(host, command, options))
 end
 
 def sudo_test(host, command)
@@ -123,9 +123,9 @@ def sudo_upload(host, io, path, options = {})
   end
 end
 
-def wrap_in_sudo(host, command)
+def wrap_in_sudo(host, command, options = {})
   if host.user == 'root'
-    b(command)
+    b(command, options)
   else
     if !host.properties.fetch(:sudo_checked)
       if test("[[ -e /usr/bin/sudo ]]")
@@ -144,12 +144,16 @@ def wrap_in_sudo(host, command)
         fatal_and_abort "Onepush requires 'sudo' to be installed on the server. Please install it first."
       end
     end
-    "/usr/bin/sudo -k -n -H #{b command}"
+    "/usr/bin/sudo -k -n -H #{b(command, options)}"
   end
 end
 
-def b(script)
-  full_script = "set -o pipefail && #{script}"
+def b(script, options = {})
+  if options.fetch(:pipefail, true)
+    full_script = "set -o pipefail && #{script}"
+  else
+    full_script = script
+  end
   "/bin/bash -c #{Shellwords.escape(full_script)}"
 end
 

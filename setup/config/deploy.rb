@@ -14,7 +14,7 @@ MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
 
-TOTAL_STEPS = 13
+TOTAL_STEPS = 14
 
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.
@@ -29,6 +29,15 @@ after :production, :initialize_onepush do
   end
 end
 
+
+task :run_postinstall => :install_essentials do
+  notice "Running post-installation scripts..."
+  on roles(:app, :db) do |host|
+    MANIFEST['postinstall_script'].each do |script|
+      sudo(host, script, :pipefail => false)
+    end
+  end
+end
 
 task :install_onepush_manifest => :install_essentials do
   notice "Saving setup information..."
@@ -121,10 +130,13 @@ task :setup do
   invoke :create_app_vhost
   report_progress(11, TOTAL_STEPS)
 
-  invoke :install_onepush_manifest
+  invoke :run_postinstall
   report_progress(12, TOTAL_STEPS)
-  invoke :restart_services
+
+  invoke :install_onepush_manifest
   report_progress(13, TOTAL_STEPS)
+  invoke :restart_services
+  report_progress(14, TOTAL_STEPS)
 
   notice "Finished."
 end
