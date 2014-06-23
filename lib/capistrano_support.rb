@@ -430,7 +430,7 @@ def _check_server_setup(host)
   notice "Checking server setup..."
   report_progress(1, TOTAL_STEPS)
 
-  if !check_server_setup_and_return_result(host)
+  if !check_server_setup_and_return_result(host, false)
     notice "Configuration changed. Re-setting up server..."
     env = ENV.to_hash.dup
     env["PROGRESS_BASE"] = $current_progress.to_s
@@ -444,18 +444,27 @@ def _check_server_setup(host)
     end
     $progress_base = 0.5
 
-    if !check_server_setup_and_return_result(host)
+    if !check_server_setup_and_return_result(host, true)
       fatal_and_abort "The server must be re-setup. Please run 'onepush setup'."
     end
   end
 end
 
-def check_server_setup_and_return_result(host)
+def check_server_setup_and_return_result(host, last_chance)
   id = MANIFEST['id']
   set :application, id
 
   # Infer app dir
-  app_dir = capture("readlink /etc/onepush/apps/#{id}; true").strip
+  begin
+    app_dir = capture("readlink /etc/onepush/apps/#{id}; true").strip
+  rescue Net::SSH::AuthenticationFailed => e
+    if last_chance
+      raise e
+    else
+      # Probably means that the server isn't setup yet.
+      return false
+    end
+  end
   if app_dir.empty?
     return false
   end
