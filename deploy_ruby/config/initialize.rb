@@ -11,6 +11,8 @@ MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
 
+TOTAL_STEPS = 9.0
+
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.
 set :pty, true
@@ -20,6 +22,7 @@ namespace :deploy do
   task :initialize_onepush do
     Dir.chdir(ENV['APP_ROOT'])
     initialize_onepush_capistrano
+    notice "Initializing..."
   end
 
   # Check whether the server is setup correctly, and autodetect various
@@ -27,6 +30,8 @@ namespace :deploy do
   # file.
   task :check_server_setup do
     on roles(:app) do |host|
+      notice "Checking server setup..."
+      report_progress(1, TOTAL_STEPS)
       _check_server_setup(host)
     end
   end

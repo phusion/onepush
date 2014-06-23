@@ -1,5 +1,7 @@
 set :linked_files, %w{config/database.yml config/secrets.yml}
 set :linked_dirs, %w{log tmp vendor/bundle public/system}
+set :bundle_roles, :app
+set :bundle_flags, "--deployment"
 
 namespace :deploy do
   # Override migrate task from capistrano-rails.
@@ -103,36 +105,34 @@ namespace :deploy do
 
   ###### Progress reporting hooks ######
   
-  TOTAL_STEPS = 8.0
-
   before :starting, :report_progress_starting do
     notice "Running sanity checks..."
-    report_progress(1, TOTAL_STEPS)
+    report_progress(2, TOTAL_STEPS)
   end
 
   before :updating, :report_progress_updating do
     notice "Copying files for new release..."
-    report_progress(2, TOTAL_STEPS)
+    report_progress(3, TOTAL_STEPS)
   end
 
   before '^bundler:install', :report_progress_bundle_install do
     notice "Installing gem bundle..."
-    report_progress(3, TOTAL_STEPS)
+    report_progress(4, TOTAL_STEPS)
   end
 
   before :compile_assets, :report_progress_compile_assets do
     notice "Compiling assets..."
-    report_progress(4, TOTAL_STEPS)
+    report_progress(5, TOTAL_STEPS)
   end
 
   before :normalize_assets, :report_progress_normalize_assets do
     notice "Normalizing assets..."
-    report_progress(5, TOTAL_STEPS)
+    report_progress(6, TOTAL_STEPS)
   end
 
   before :migrate, :report_progress_migrate do
     notice "Running database migrations..."
-    report_progress(6, TOTAL_STEPS)
+    report_progress(7, TOTAL_STEPS)
   end
 
   before :reverting, :report_progress_reverting do
