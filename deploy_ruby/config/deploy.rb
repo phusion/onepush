@@ -6,15 +6,21 @@ set :bundle_flags, "--deployment"
 namespace :deploy do
   # Override migrate task from capistrano-rails.
   # We add the ability to run db:schema:load instead of db:migrate.
+  # We also don't run the task if ActiveRecord is disabled in the app.
   Rake::Task["deploy:migrate"].clear_actions
   task :migrate => [:set_rails_env] do
     on primary fetch(:migration_role) do
       within release_path do
         with rails_env: fetch(:rails_env) do
+          output = capture(:rake, "-T")
           if fetch(:schema_load)
-            execute :rake, "db:schema:load"
+            if output =~ / db:schema:load /
+              execute :rake, "db:schema:load"
+            end
           else
-            execute :rake, "db:migrate"
+            if output =~ / db:migrate /
+              execute :rake, "db:migrate"
+            end
           end
         end
       end
