@@ -30,7 +30,11 @@ module Onepush
     install_passenger
     install_web_server
     install_common_ruby_app_dependencies
-  )
+  ).freeze
+
+  NULLABLE_PROPERTIES = %w(
+    ruby_version
+  ).freeze
 
   ALL_PROPERTIES =
     (UNCHANGEABLE_PROPERTIES +
@@ -66,7 +70,7 @@ module Onepush
 
       # Bug check
       ALL_PROPERTIES.each do |name|
-        if !manifest.has_key?(name)
+        if !manifest.has_key?(name) && !NULLABLE_PROPERTIES.include?(name)
           raise "Bug: didn't set default value for #{name}"
         end
       end
