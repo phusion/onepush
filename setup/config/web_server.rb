@@ -20,11 +20,15 @@ def install_nginx
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
-      if !nginx_installed?(host)
+      if nginx_installed?(host)
+        ensure_nginx_has_passenger_support(host)
+      else
         install_nginx_from_source_with_passenger(host)
       end
     when :debian
-      if !nginx_installed?(host)
+      if nginx_installed?(host)
+        ensure_nginx_has_passenger_support(host)
+      else
         if should_install_nginx_from_phusion_apt?
           install_nginx_from_phusion_apt(host)
         else
@@ -40,6 +44,10 @@ end
 
 def nginx_installed?(host)
   !!autodetect_nginx(host)
+end
+
+def ensure_nginx_has_passenger_support(host)
+  # TODO
 end
 
 def should_install_nginx_from_phusion_apt?
