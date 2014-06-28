@@ -27,24 +27,6 @@ namespace :deploy do
     end
   end
 
-  desc 'Sanity check codebase'
-  task :check_codebase do
-    gemfile_lock = `git show HEAD:Gemfile.lock`
-    manifest = fetch(:onepush_manifest)
-
-    case manifest['database_type']
-    when 'postgresql'
-      if gemfile_lock !~ / pg /
-        fatal_and_abort "Onepush uses PostgreSQL as database. However, your " +
-          "app does not include the PostgreSQL driver. Please add this to your Gemfile:\n" +
-          "  gem 'pg'\n\n" +
-          "Then run 'bundle install', then run 'onepush deploy' again."
-      end
-    else
-      fatal_and_abort "Unsupported database type. Only PostgreSQL is supported."
-    end
-  end
-
   desc 'Push code to app servers'
   task :push_code do
     revision  = `git rev-parse --abbrev-ref HEAD`.strip
@@ -88,7 +70,6 @@ namespace :deploy do
     end
   end
 
-  before :starting, :check_codebase
   before :starting, :push_code
 
   desc 'Restart application'

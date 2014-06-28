@@ -29,7 +29,7 @@ when "setup", "deploy"
   ssh_keys = []
 
   parser = OptionParser.new do |opts|
-    opts.banner = "Usage: onepush #{command} [options]"
+    opts.banner = "Usage: onepush-engine #{command} [options]"
     opts.separator ""
 
     opts.separator "Options:"
@@ -61,6 +61,10 @@ when "setup", "deploy"
     end
     opts.on("--progress-base NUMBER", Float) do |val|
       ENV['PROGRESS_BASE'] = val.to_s
+    end
+    opts.on("--help") do
+      puts parser
+      exit
     end
   end
   begin
