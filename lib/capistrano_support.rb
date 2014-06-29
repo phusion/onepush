@@ -440,23 +440,8 @@ def _check_server_setup(host)
   notice "Checking server setup..."
   report_progress(1, TOTAL_STEPS)
 
-  if !check_server_setup_and_return_result(host, false)
-    notice "Configuration changed. Re-setting up server..."
-    env = ENV.to_hash.dup
-    env["PROGRESS_BASE"] = $current_progress.to_s
-    env["PROGRESS_CEIL"] = "0.5"
-    if ENV["SSHKIT_OUTPUT"]
-      env["SSHKIT_OUTPUT"] = ENV["SSHKIT_OUTPUT"]
-    end
-    if !system(env, "bundle", "exec", "cap", "production", "setup", :chdir => "#{ROOT}/setup")
-      # Abort without printing backtrace.
-      exit!
-    end
-    $progress_base = 0.5
-
-    if !check_server_setup_and_return_result(host, true)
-      fatal_and_abort "The server must be re-setup. Please run 'onepush setup'."
-    end
+  if !check_server_setup_and_return_result(host, true)
+    fatal_and_abort "The server must be re-setup. Please run 'onepush setup'."
   end
 end
 
