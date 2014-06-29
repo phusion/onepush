@@ -22,7 +22,7 @@ namespace :deploy do
   task :initialize_onepush do
     Dir.chdir(ENV['APP_ROOT'])
     initialize_onepush_capistrano
-    notice "Initializing..."
+    notice "Preparing deployment process..."
   end
 
   # Check whether the server is setup correctly, and autodetect various

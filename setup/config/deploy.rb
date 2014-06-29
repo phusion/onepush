@@ -80,6 +80,7 @@ task :check_resetup_necessary => :install_essentials do
 
     if states.all? { |should_resetup| !should_resetup }
       info "Server setup is up-to-date. Skipping full setup process."
+      report_progress(TOTAL_STEPS, TOTAL_STEPS)
       exit
     end
   end
@@ -194,7 +195,7 @@ task :setup do
   invoke :install_onepush_manifest
   report_progress(14, TOTAL_STEPS)
   invoke :restart_services
-  report_progress(15, TOTAL_STEPS)
+  report_progress(TOTAL_STEPS, TOTAL_STEPS)
 
   notice "Finished."
 end
