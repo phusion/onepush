@@ -1,5 +1,5 @@
 task :install_language_runtime => :install_essentials do
-  notice "Installing language runtime..."
+  log_notice "Installing language runtime..."
   case MANIFEST['type']
   when 'ruby'
     invoke :install_ruby_runtime
@@ -28,7 +28,7 @@ def install_rvm(host)
 
   ruby_version = MANIFEST['ruby_version']
   if ruby_version && !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
-    info "Installing Ruby interpreter: #{ruby_version}"
+    log_info "Installing Ruby interpreter: #{ruby_version}"
     sudo(host, "/usr/local/rvm/bin/rvm install #{ruby_version}")
   end
 
@@ -36,7 +36,7 @@ def install_rvm(host)
     rubies = capture("ls -1d /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
     rubies = rubies.split(/\r?\n/).map { |x| File.basename(x) }.sort
     if rubies.empty?
-      info "Installing Ruby interpreter: latest version"
+      log_info "Installing Ruby interpreter: latest version"
       sudo(host, "/usr/local/rvm/bin/rvm install ruby")
       rubies = capture("ls -1d /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
       rubies = rubies.split(/\r?\n/).map { |x| File.basename(x) }.sort

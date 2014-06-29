@@ -26,7 +26,7 @@ after :production, :initialize_onepush do
   Dir.chdir(ENV['APP_ROOT'])
   initialize_onepush_capistrano
   on roles(:app, :db) do |host|
-    notice "Setting up server: #{host}"
+    log_notice "Setting up server: #{host}"
   end
 end
 
@@ -45,14 +45,14 @@ def _check_resetup_necessary(host)
   begin
     server_manifest = JSON.parse(server_manifest_str)
   rescue JSON::ParserError
-    warn("The manifest file on the server (#{server_manifest_path}) is " +
+    log_warn("The manifest file on the server (#{server_manifest_path}) is " +
       "corrupted. Will re-setup server in order to fix things.")
     return true
   end
 
   Onepush::CHANGEABLE_PROPERTIES.each do |name|
     if MANIFEST[name] != server_manifest[name]
-      warn("Onepush.json has changed. Will re-setup server.")
+      log_warn("Onepush.json has changed. Will re-setup server.")
       return true
     end
   end
@@ -60,7 +60,7 @@ def _check_resetup_necessary(host)
   if MANIFEST['type'] == 'ruby' && MANIFEST['ruby_manager'] == 'rvm'
     ruby_version = MANIFEST['ruby_version']
     if !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
-      warn("Ruby version #{ruby_version} not installed. Will re-setup server.")
+      log_warn("Ruby version #{ruby_version} not installed. Will re-setup server.")
       return true
     end
   end
@@ -79,7 +79,7 @@ task :check_resetup_necessary => :install_essentials do
     end
 
     if states.all? { |should_resetup| !should_resetup }
-      info "Server setup is up-to-date. Skipping full setup process."
+      log_info "Server setup is up-to-date. Skipping full setup process."
       report_progress(TOTAL_STEPS, TOTAL_STEPS)
       exit
     end
@@ -87,7 +87,7 @@ task :check_resetup_necessary => :install_essentials do
 end
 
 task :run_postsetup => :install_essentials do
-  notice "Running post-setup scripts..."
+  log_notice "Running post-setup scripts..."
   on roles(:app, :db) do |host|
     MANIFEST['postsetup_script'].each do |script|
       sudo(host, script, :pipefail => false)
@@ -96,7 +96,7 @@ task :run_postsetup => :install_essentials do
 end
 
 task :install_onepush_manifest => :install_essentials do
-  notice "Saving setup information..."
+  log_notice "Saving setup information..."
   id      = MANIFEST['id']
   app_dir = MANIFEST['app_dir']
 
@@ -124,7 +124,7 @@ task :install_onepush_manifest => :install_essentials do
 end
 
 task :restart_services => :install_essentials do
-  notice "Restarting services..."
+  log_notice "Restarting services..."
   on roles(:app) do |host|
     if test("sudo test -e /var/run/onepush/restart_web_server")
       sudo(host, "rm -f /var/run/onepush/restart_web_server")
@@ -197,5 +197,5 @@ task :setup do
   invoke :restart_services
   report_progress(TOTAL_STEPS, TOTAL_STEPS)
 
-  notice "Finished."
+  log_notice "Finished setting up server."
 end

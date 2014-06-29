@@ -48,47 +48,47 @@ namespace :deploy do
   ###### Progress reporting hooks ######
   
   before :starting, :report_progress_starting do
-    notice "Running sanity checks..."
+    log_notice "Running sanity checks..."
     report_progress(2, TOTAL_STEPS)
   end
 
   before :updating, :report_progress_updating do
-    notice "Copying files for new release..."
+    log_notice "Copying files for new release..."
     report_progress(3, TOTAL_STEPS)
   end
 
   before '^bundler:install', :report_progress_bundle_install do
-    notice "Installing gem bundle..."
+    log_notice "Installing gem bundle..."
     report_progress(4, TOTAL_STEPS)
   end
 
   before :compile_assets, :report_progress_compile_assets do
-    notice "Compiling assets..."
+    log_notice "Compiling assets..."
     report_progress(5, TOTAL_STEPS)
   end
 
   before :normalize_assets, :report_progress_normalize_assets do
-    notice "Normalizing assets..."
+    log_notice "Normalizing assets..."
     report_progress(6, TOTAL_STEPS)
   end
 
   before :migrate, :report_progress_migrate do
-    notice "Running database migrations..."
+    log_notice "Running database migrations..."
     report_progress(7, TOTAL_STEPS)
   end
 
   before :reverting, :report_progress_reverting do
-    notice "Reverting to previous release..."
+    log_notice "Reverting to previous release..."
     report_progress((TOTAL_STEPS - 1), TOTAL_STEPS)
   end
 
   before :finishing, :report_progress_finishing do
-    notice "Finalizing release..."
+    log_notice "Finalizing release..."
     report_progress((TOTAL_STEPS - 1), TOTAL_STEPS)
   end
 
   after :finished, :report_progress_finished do
-    notice "Finished!"
+    log_notice "Finished deploying app!"
     report_progress(TOTAL_STEPS, TOTAL_STEPS)
   end
 end

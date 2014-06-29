@@ -1,5 +1,5 @@
 task :create_app_user => :install_essentials do
-  notice "Creating user account for app..."
+  log_notice "Creating user account for app..."
   on roles(:app) do |host|
     name = MANIFEST['user']
 
@@ -25,7 +25,7 @@ task :create_app_user => :install_essentials do
 end
 
 task :create_app_dir => [:install_essentials, :create_app_user] do
-  notice "Creating directory for app..."
+  log_notice "Creating directory for app..."
   path  = MANIFEST['app_dir']
   owner = MANIFEST['user']
 
@@ -43,7 +43,7 @@ task :create_app_dir => [:install_essentials, :create_app_user] do
 end
 
 task :create_app_vhost => [:create_app_dir] do
-  notice "Creating web server virtual host for app..."
+  log_notice "Creating web server virtual host for app..."
   app_dir = MANIFEST['app_dir']
   user    = MANIFEST['user']
   shared_dir = "#{app_dir}/shared"

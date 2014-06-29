@@ -1,6 +1,6 @@
 task :install_web_server => [:install_essentials, :install_passenger] do
   if MANIFEST['install_web_server']
-    notice "Installing web server..."
+    log_notice "Installing web server..."
     case MANIFEST['web_server_type']
     when 'nginx'
       install_nginx
@@ -152,7 +152,7 @@ def install_nginx_service
       end
 
       if !sudo_test(host, "grep -q '^daemon ' #{config_file}")
-        info "Disabling daemon mode in #{config_file}"
+        log_info "Disabling daemon mode in #{config_file}"
         io = StringIO.new
         download!(config_file, io)
 
@@ -163,7 +163,7 @@ def install_nginx_service
 
         sudo_upload(host, config, "/opt/nginx/conf/nginx.conf")
       elsif sudo_test(host, "grep '^daemon on;' /opt/nginx/conf/nginx.conf")
-        info "Disabling daemon mode in /opt/nginx/conf/nginx.conf"
+        log_info "Disabling daemon mode in /opt/nginx/conf/nginx.conf"
         io = StringIO.new
         download!("/opt/nginx/conf/nginx.conf", io)
 
@@ -175,7 +175,7 @@ def install_nginx_service
       end
 
       if !test("[[ -e /etc/service/nginx/run ]]")
-        info "Installing Nginx Runit service"
+        log_info "Installing Nginx Runit service"
         script = StringIO.new
         script.puts "#!/bin/bash"
         script.puts "# Installed by Onepush."

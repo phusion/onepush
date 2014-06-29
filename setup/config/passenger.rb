@@ -1,6 +1,6 @@
 task :install_passenger => :install_essentials do
   if MANIFEST['install_passenger']
-    notice "Installing Phusion Passenger application server..."
+    log_notice "Installing Phusion Passenger application server..."
     on roles(:app) do |host|
       if passenger_installed?(host)
         check_passenger_version_supported(host)

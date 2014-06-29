@@ -1,5 +1,5 @@
 task :autodetect_os do
-  notice "Autodetecting operating system..."
+  log_notice "Autodetecting operating system..."
   on roles(:app, :db) do |host|
     if test("[[ -e /etc/redhat-release || -e /etc/centos-release ]]")
       host.set(:os_class, :redhat)
@@ -14,22 +14,22 @@ task :autodetect_os do
       end
 
       if info =~ /Red Hat/
-        notice "Red Hat #{distro_version} detected."
+        log_notice "Red Hat #{distro_version} detected."
         host.set(:os, :redhat)
         if distro_version < '6.4'
           fatal_and_abort "Onepush only supports Red Hat 6.4 and later."
         end
       elsif info =~ /CentOS/
-        notice "CentOS #{distro_version} detected."
+        log_notice "CentOS #{distro_version} detected."
         host.set(:os, :centos)
         if distro_version < '6.4'
           fatal_and_abort "Onepush only supports CentOS 6.4 and later."
         end
       elsif info =~ /Amazon/
-        notice "Amazon Linux #{distro_version} detected."
+        log_notice "Amazon Linux #{distro_version} detected."
         host.set(:os, :amazon_linux)
       else
-        notice "Unknown Red Hat derivative detected."
+        log_notice "Unknown Red Hat derivative detected."
         fatal_and_abort "Onepush only supports Red Hat, CentOS and Amazon Linux, not any other Red Hat derivatives."
       end
 
@@ -42,7 +42,7 @@ task :autodetect_os do
       distro_version = $1
       if distro_version
         host.set(:os_version, distro_version)
-        notice "Amazon Linux #{distro_version} detected."
+        log_notice "Amazon Linux #{distro_version} detected."
       else
         fatal_and_abort "Unable to autodetect Amazon Linux version."
       end
@@ -61,19 +61,19 @@ task :autodetect_os do
       host.set(:os_version, distro_version)
 
       if distributor_id =~ /ubuntu/i
-        notice "Ubuntu #{distro_version} detected."
+        log_notice "Ubuntu #{distro_version} detected."
         host.set(:os, :ubuntu)
         if distro_version < "12.04"
           fatal_and_abort "Onepush only supports Ubuntu 12.04 and later."
         end
       elsif distributor_id =~ /debian/i
-        notice "Debian #{distro_version} detected."
+        log_notice "Debian #{distro_version} detected."
         host.set(:os, :debian)
         if distro_version < "7"
           fatal_and_abort "Onepush only supports Debian 7 and later."
         end
       else
-        notice "Unknown Debian derivative detected."
+        log_notice "Unknown Debian derivative detected."
         fatal_and_abort "Onepush only supports Debian and Ubuntu, not any other Debian derivatives."
       end
 
@@ -92,10 +92,10 @@ task :autodetect_os do
     host.set(:arch, arch)
 
     if arch =~ /^i.86$/ || arch == "x86"
-      notice "x86 architecture detected."
+      log_notice "x86 architecture detected."
       host.set(:normalized_arch, "x86")
     elsif arch == "amd64" || arch == "x86_64"
-      notice "x86_64 architecture detected."
+      log_notice "x86_64 architecture detected."
       host.set(:normalized_arch, "x86_64")
     else
       fatal_and_abort "Unsupported machine architecture #{arch.inspect}. Onepush only " +
@@ -105,7 +105,7 @@ task :autodetect_os do
 end
 
 task :install_essentials => :autodetect_os do
-  notice "Installing essentials..."
+  log_notice "Installing essentials..."
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
@@ -156,7 +156,7 @@ def enable_epel(host)
       fatal_and_abort "Unable to enable EPEL automatically. Please do it manually."
     end
 
-    notice "Installing EPEL release #{epel_version} for #{epel_arch}"
+    log_notice "Installing EPEL release #{epel_version} for #{epel_arch}"
     epel_rpm_url = "http://download.fedoraproject.org/pub/epel/#{epel_major_version}/#{epel_arch}/epel-release-#{epel_version}.noarch.rpm"
     sudo(host, "rpm -Uvh #{epel_rpm_url}")
   end
@@ -192,7 +192,7 @@ def enable_phusion_runit_yum_repo(host)
       name = "el"
     end
 
-    notice "Installing Phusion Runit repo"
+    log_notice "Installing Phusion Runit repo"
     sudo(host, "curl --fail -L -o /etc/yum.repos.d/phusion-runit.repo https://oss-binaries.phusionpassenger.com/yumgems/phusion-runit/#{name}.repo")
   end
 end

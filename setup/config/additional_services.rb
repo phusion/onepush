@@ -1,5 +1,5 @@
 task :install_additional_services => :install_essentials do
-  notice "Installing additional services..."
+  log_notice "Installing additional services..."
 
   on roles(:app) do |host|
     if MANIFEST['memcached']

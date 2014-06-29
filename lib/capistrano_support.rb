@@ -33,33 +33,33 @@ def log_terminal(level, message)
   end
 end
 
-def fatal(message)
+def log_fatal(message)
   log_sshkit(:fatal, message)
   log_terminal(:fatal, message)
 end
 
-def error(message)
+def log_error(message)
   log_sshkit(:error, message)
   log_terminal(:error, message)
 end
 
-def warn(message)
+def log_warn(message)
   log_sshkit(:warn, message)
   log_terminal(:warn, message)
 end
 
-def notice(message)
+def log_notice(message)
   log_sshkit(:info, message)
   log_terminal(:notice, message)
 end
 
-def info(message)
+def log_info(message)
   log_sshkit(:info, message)
   log_terminal(:info, message)
 end
 
 def fatal_and_abort(message)
-  fatal(message)
+  log_fatal(message)
   abort
 end
 
@@ -437,7 +437,7 @@ end
 
 
 def _check_server_setup(host)
-  notice "Checking server setup..."
+  log_notice "Checking server setup..."
   report_progress(1, TOTAL_STEPS)
 
   if !check_server_setup_and_return_result(host, true)
