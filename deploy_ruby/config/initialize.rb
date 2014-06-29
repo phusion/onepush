@@ -11,7 +11,7 @@ MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
 
-TOTAL_STEPS = 9.0
+TOTAL_STEPS = 11
 
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.

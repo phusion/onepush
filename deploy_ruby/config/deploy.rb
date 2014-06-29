@@ -34,6 +34,18 @@ namespace :deploy do
     end
   end
 
+  after :publishing, :create_ruby_version_file do
+    if MANIFEST['ruby_version']
+      log_info "Creating .ruby-version file..."
+      on roles(:app) do
+        io = StringIO.new
+        io.puts MANIFEST['ruby_version']
+        io.rewind
+        upload! io, release_path.join('.ruby-version')
+      end
+    end
+  end
+
   after :publishing, :restart
 
   after :restart, :clear_cache do
@@ -75,6 +87,16 @@ namespace :deploy do
   before :migrate, :report_progress_migrate do
     log_notice "Running database migrations..."
     report_progress(7, TOTAL_STEPS)
+  end
+
+  before :restart, :report_progress_restart do
+    log_notice "Restarting app..."
+    report_progress(8, TOTAL_STEPS)
+  end
+
+  before :clear_cache, :report_progress_clear_cache do
+    log_notice "Clearing caches..."
+    report_progress(9, TOTAL_STEPS)
   end
 
   before :reverting, :report_progress_reverting do

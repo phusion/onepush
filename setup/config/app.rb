@@ -54,7 +54,7 @@ task :create_app_vhost => [:create_app_dir] do
     ruby_version = MANIFEST['ruby_version'] || 'default'
     script = StringIO.new
     script.puts "#!/bin/bash"
-    script.puts "# Installed by Onepush."
+    script.puts "# Installed by OnePush."
     script.puts "exec /usr/local/rvm/bin/rvm-exec #{ruby_version} ruby \"$@\""
     script.rewind
   end
