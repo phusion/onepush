@@ -63,9 +63,6 @@ def install_common_ruby_app_dependencies
         packages.concat %w(sqlite-devel)
         # For postgres and pg.
         packages.concat %w(postgresql-devel)
-        # For capybara-webkit.
-        # TODO: check whether package name has changed in Red Hat 7
-        packages.concat %w(qt-devel)
         # For curb.
         packages.concat %w(libcurl-devel)
 
@@ -84,8 +81,6 @@ def install_common_ruby_app_dependencies
         packages.concat %w(libsqlite3-dev)
         # For postgres and pg.
         packages.concat %w(libpq-dev)
-        # For capybara-webkit.
-        packages.concat %w(libqt4-webkit libqt4-dev)
         # For curb.
         packages.concat %w(libcurl4-openssl-dev)
 
