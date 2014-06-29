@@ -142,7 +142,7 @@ task :restart_services => :install_essentials do
           sudo(host, "/etc/init.d/httpd restart")
         end
       else
-        abort "Unsupported web server. Onepush supports 'nginx' and 'apache'."
+        abort "Unsupported web server. OnePush supports 'nginx' and 'apache'."
       end
     end
   end

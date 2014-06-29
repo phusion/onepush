@@ -140,18 +140,18 @@ def wrap_in_sudo(host, command, options = {})
     if !host.properties.fetch(:sudo_checked)
       if test("[[ -e /usr/bin/sudo ]]")
         if !test("/usr/bin/sudo -k -n true")
-          fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, Onepush " +
+          fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, OnePush " +
             "needs sudo to *not* ask for a password. Please *temporarily* configure " +
             "sudo to allow the '#{host.user}' user to run it without a password.\n\n" +
             "Open the sudo configuration file:\n" +
             "  sudo visudo\n\n" +
             "Then insert:\n" +
-            "  # Remove this entry later. Onepush only needs it temporarily.\n" +
+            "  # Remove this entry later. OnePush only needs it temporarily.\n" +
             "  #{host.user} ALL=(ALL) NOPASSWD: ALL"
         end
         host.properties.set(:sudo_checked, true)
       else
-        fatal_and_abort "Onepush requires 'sudo' to be installed on the server. Please install it first."
+        fatal_and_abort "OnePush requires 'sudo' to be installed on the server. Please install it first."
       end
     end
     "/usr/bin/sudo -k -n -H #{b(command, options)}"
@@ -293,6 +293,7 @@ def autodetect_nginx(host)
         if has_runit_service
           result[:restart_command] = "sv restart /etc/service/nginx"
         end
+        result
       else
         nil
       end
@@ -302,7 +303,7 @@ end
 
 def autodetect_nginx!(host)
   autodetect_nginx(host) ||
-    fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in Onepush. " +
+    fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in OnePush. " +
       "Please report this to the authors.")
 end
 
@@ -324,16 +325,20 @@ def autodetect_passenger(host)
       result[:config_command]    = "#{ruby} /opt/passenger/current/bin/passenger-config".strip
       result
     else
-      passenger_config = capture("which passenger-config", :raise_on_non_zero_exit => false).strip
-      if passenger_config.empty?
-        nil
-      else
+      begin
+        passenger_config = capture("which passenger-config").strip
+      rescue SSHKit::Command::Failed
+        passenger_config = nil
+      end
+      if passenger_config
         bindir = File.dirname(passenger_config)
         result[:bindir] = bindir
         result[:nginx_installer]   = "#{bindir}/passenger-install-nginx-module"
         result[:apache2_installer] = "#{bindir}/passenger-install-apache2-module"
         result[:config_command]    = passenger_config
         result
+      else
+        nil
       end
     end
   end
@@ -341,7 +346,7 @@ end
 
 def autodetect_passenger!(host)
   autodetect_passenger(host) || \
-    fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in Onepush. " +
+    fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in OnePush. " +
       "Please report this to the authors.")
 end
 
@@ -376,7 +381,7 @@ end
 def autodetect_ruby_interpreter_for_passenger!(host)
   autodetect_ruby_interpreter_for_passenger(host) || \
     fatal_and_abort("Unable to find a Ruby interpreter on the system. This is probably " +
-      "a bug in Onepush. Please report this to the authors.")
+      "a bug in OnePush. Please report this to the authors.")
 end
 
 
