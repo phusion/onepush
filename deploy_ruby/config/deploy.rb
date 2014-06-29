@@ -1,5 +1,5 @@
 set :linked_files, %w{config/database.yml config/secrets.yml}
-set :linked_dirs, %w{log tmp vendor/bundle public/system}
+set :linked_dirs, %w{log tmp vendor/bundle public/system public/assets}
 set :bundle_roles, :app
 set :bundle_flags, "--deployment"
 

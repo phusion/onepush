@@ -29,13 +29,14 @@ task :create_app_dir => [:install_essentials, :create_app_user] do
   path  = MANIFEST['app_dir']
   owner = MANIFEST['user']
 
-  primary_dirs     = "#{path} #{path}/releases #{path}/shared #{path}"
+  primary_dirs      = "#{path} #{path}/releases #{path}/shared"
+  shared_subdirs    = "#{path}/shared/config #{path}/shared/public/system #{path}/shared/public/assets"
   onepush_repo_path = "#{path}/onepush_repo"
-  repo_dirs        = "#{path}/repo #{onepush_repo_path}"
+  repo_dirs         = "#{path}/repo #{onepush_repo_path}"
 
   on roles(:app) do |host|
     sudo(host, "mkdir -p #{primary_dirs} && chown #{owner}: #{primary_dirs} && chmod u=rwx,g=rx,o=x #{primary_dirs}")
-    sudo(host, "mkdir -p #{path}/shared/config && chown #{owner}: #{path}/shared/config")
+    sudo(host, "mkdir -p #{shared_subdirs} && chown #{owner}: #{shared_subdirs}")
 
     sudo(host, "mkdir -p #{repo_dirs} && chown #{owner}: #{repo_dirs} && chmod u=rwx,g=,o= #{repo_dirs}")
     sudo(host, "cd #{onepush_repo_path} && if ! [[ -e HEAD ]]; then sudo -u #{owner} git init --bare; fi")
