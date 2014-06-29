@@ -1,3 +1,4 @@
+require 'thread'
 require 'json'
 require 'stringio'
 require 'securerandom'
@@ -14,7 +15,7 @@ MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
 Onepush.set_manifest_defaults(MANIFEST)
 
-TOTAL_STEPS = 14
+TOTAL_STEPS = 15
 
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.
@@ -29,6 +30,60 @@ after :production, :initialize_onepush do
   end
 end
 
+
+def _check_resetup_necessary(host)
+  id       = MANIFEST['id']
+  app_dir  = MANIFEST['app_dir']
+  onepush_repo_path    = "#{app_dir}/onepush_repo"
+  server_manifest_path = "#{app_dir}/onepush-setup.json"
+
+  if !sudo_test(host, "[[ -e #{onepush_repo_path} && -e /etc/onepush/apps/#{id} && -e #{server_manifest_path} ]]")
+    return true
+  end
+
+  server_manifest_str = sudo_download_to_string(host, server_manifest_path)
+  begin
+    server_manifest = JSON.parse(server_manifest_str)
+  rescue JSON::ParserError
+    warn("The manifest file on the server (#{server_manifest_path}) is " +
+      "corrupted. Will re-setup server in order to fix things.")
+    return true
+  end
+
+  Onepush::CHANGEABLE_PROPERTIES.each do |name|
+    if MANIFEST[name] != server_manifest[name]
+      warn("Onepush.json has changed. Will re-setup server.")
+      return true
+    end
+  end
+
+  if MANIFEST['type'] == 'ruby' && MANIFEST['ruby_manager'] == 'rvm'
+    ruby_version = MANIFEST['ruby_version']
+    if !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
+      warn("Ruby version #{ruby_version} not installed. Will re-setup server.")
+      return true
+    end
+  end
+
+  false
+end
+
+task :check_resetup_necessary => :install_essentials do
+  if ENV['IF_NEEDED']
+    mutex  = Mutex.new
+    states = []
+
+    on roles(:app) do |host|
+      should_resetup = _check_resetup_necessary(host)
+      mutex.synchronize { states << should_resetup }
+    end
+
+    if states.all? { |should_resetup| !should_resetup }
+      info "Server setup is up-to-date. Skipping full setup process."
+      exit
+    end
+  end
+end
 
 task :run_postsetup => :install_essentials do
   notice "Running post-setup scripts..."
@@ -101,42 +156,45 @@ task :setup do
   invoke :install_essentials
   report_progress(3, TOTAL_STEPS)
 
-  invoke :install_language_runtime
+  invoke :check_resetup_necessary
   report_progress(4, TOTAL_STEPS)
 
-  invoke :install_passenger
+  invoke :install_language_runtime
   report_progress(5, TOTAL_STEPS)
 
-  invoke :install_web_server
+  invoke :install_passenger
   report_progress(6, TOTAL_STEPS)
+
+  invoke :install_web_server
+  report_progress(7, TOTAL_STEPS)
 
   invoke :create_app_user
   invoke :create_app_dir
-  report_progress(7, TOTAL_STEPS)
+  report_progress(8, TOTAL_STEPS)
 
   invoke :install_dbms
-  report_progress(8, TOTAL_STEPS)
+  report_progress(9, TOTAL_STEPS)
 
   setup_database(MANIFEST['database_type'], MANIFEST['database_name'],
     MANIFEST['database_user'])
   create_app_database_config(MANIFEST['app_dir'], MANIFEST['user'],
     MANIFEST['database_type'], MANIFEST['database_name'],
     MANIFEST['database_user'])
-  report_progress(9, TOTAL_STEPS)
-
-  invoke :install_additional_services
   report_progress(10, TOTAL_STEPS)
 
-  invoke :create_app_vhost
+  invoke :install_additional_services
   report_progress(11, TOTAL_STEPS)
 
-  invoke :run_postsetup
+  invoke :create_app_vhost
   report_progress(12, TOTAL_STEPS)
 
-  invoke :install_onepush_manifest
+  invoke :run_postsetup
   report_progress(13, TOTAL_STEPS)
-  invoke :restart_services
+
+  invoke :install_onepush_manifest
   report_progress(14, TOTAL_STEPS)
+  invoke :restart_services
+  report_progress(15, TOTAL_STEPS)
 
   notice "Finished."
 end

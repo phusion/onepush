@@ -38,6 +38,16 @@ def fatal(message)
   log_terminal(:fatal, message)
 end
 
+def error(message)
+  log_sshkit(:error, message)
+  log_terminal(:error, message)
+end
+
+def warn(message)
+  log_sshkit(:warn, message)
+  log_terminal(:warn, message)
+end
+
 def notice(message)
   log_sshkit(:info, message)
   log_terminal(:notice, message)

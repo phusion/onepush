@@ -14,10 +14,9 @@ ARGV.shift
 
 ENV.delete('MANIFEST_JSON')
 ENV.delete('SSHKIT_OUTPUT')
-ENV.delete('INSTALL_PUBKEYS')
 ENV.delete('SSH_KEYS')
 ENV.delete('VAGRANT_KEY')
-ENV.delete('SERVERS')
+ENV.delete('IF_NEEDED')
 ENV.delete('REPORT_PROGRESS')
 ENV.delete('PROGRESS_BASE')
 ENV.delete('PROGRESS_CEIL')
@@ -46,6 +45,10 @@ when "setup", "deploy"
       opts.on("--deploy-address ADDRESS", String) do |address|
         deploy_addresses << address
       end
+    else
+      opts.on("--if-needed") do
+        ENV['IF_NEEDED'] = '1'
+      end
     end
     opts.on("--ssh-log FILENAME", String) do |filename|
       ENV['SSHKIT_OUTPUT'] = filename
@@ -61,6 +64,9 @@ when "setup", "deploy"
     end
     opts.on("--progress-base NUMBER", Float) do |val|
       ENV['PROGRESS_BASE'] = val.to_s
+    end
+    opts.on("--progress-ceil NUMBER", Float) do |val|
+      ENV['PROGRESS_CEIL'] = val.to_s
     end
     opts.on("--help") do
       puts parser
