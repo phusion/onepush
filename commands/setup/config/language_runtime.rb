@@ -23,7 +23,8 @@ end
 
 def install_rvm(host)
   if !test("[[ -e /usr/local/rvm/bin/rvm ]]")
-    sudo(host, "curl -sSL https://get.rvm.io | bash -s stable --ruby")
+    sudo(host, "gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3")
+    sudo(host, "curl -sSL https://get.rvm.io | bash -s 1.26.5 --ruby")
   end
 
   ruby_version = MANIFEST['ruby_version']
@@ -45,7 +46,7 @@ def install_rvm(host)
   end
 
   io = StringIO.new
-  io.puts "# Installed by OnePush."
+  io.puts "# Installed by #{POMODORI_APP_NAME}."
   io.puts "# Relaxing sudo defaults for RVM: https://rvm.io/integration/sudo"
   io.puts 'Defaults env_keep += "rvm_bin_path GEM_HOME IRBRC MY_RUBY_HOME ' +
     'rvm_path rvm_prefix rvm_version GEM_PATH rvmsudo_secure_path RUBY_VERSION ' +
@@ -54,7 +55,7 @@ def install_rvm(host)
   sudo_upload(host, io, "/etc/sudoers.d/rvm", :chmod => "u=r,g=r,o=")
 
   io = StringIO.new
-  io.puts "# Installed by OnePush."
+  io.puts "# Installed by #{POMODORI_APP_NAME}."
   if sudo_test(host, "shopt -s nullglob && grep -q secure_path /etc/sudoers /etc/sudoers.d/*")
     io.puts "export rvmsudo_secure_path=1"
   else

@@ -18,7 +18,7 @@ TOTAL_STEPS = 15
 set :pty, true
 
 
-after :production, :initialize_onepush do
+after :production, :initialize_pomodori do
   Dir.chdir(CONFIG.app_root)
   Pomodori::CapistranoSupport.initialize!
   on roles(:app, :db) do |host|
@@ -30,10 +30,10 @@ end
 def _check_resetup_necessary(host)
   id       = MANIFEST['id']
   app_dir  = MANIFEST['app_dir']
-  onepush_repo_path    = "#{app_dir}/onepush_repo"
+  pomodori_repo_path   = "#{app_dir}/pomodori_repo"
   server_manifest_path = "#{app_dir}/onepush-setup.json"
 
-  if !sudo_test(host, "[[ -e #{onepush_repo_path} && -e /etc/onepush/apps/#{id} && -e #{server_manifest_path} ]]")
+  if !sudo_test(host, "[[ -e #{pomodori_repo_path} && -e /etc/pomodori/apps/#{id} && -e #{server_manifest_path} ]]")
     return true
   end
 
@@ -46,7 +46,7 @@ def _check_resetup_necessary(host)
     return true
   end
 
-  Onepush::CHANGEABLE_PROPERTIES.each do |name|
+  Pomodori::CHANGEABLE_PROPERTIES.each do |name|
     if MANIFEST[name] != server_manifest[name]
       log_warn("Onepush.json has changed. Will re-setup server.")
       return true
@@ -91,7 +91,7 @@ task :run_postsetup => :install_essentials do
   end
 end
 
-task :install_onepush_manifest => :install_essentials do
+task :install_pomodori_manifest => :install_essentials do
   log_notice "Saving setup information..."
   id      = MANIFEST['id']
   app_dir = MANIFEST['app_dir']
@@ -105,25 +105,25 @@ task :install_onepush_manifest => :install_essentials do
     sudo_upload(host, config, "#{app_dir}/onepush-setup.json",
       :chown => "#{user}:",
       :chmod => "600")
-    sudo(host, "mkdir -p /etc/onepush/apps && " +
-      "cd /etc/onepush/apps && " +
+    sudo(host, "mkdir -p /etc/pomodori/apps && " +
+      "cd /etc/pomodori/apps && " +
       "rm -f #{id} && " +
       "ln -s #{app_dir} #{id}")
   end
 
   on roles(:app, :db) do |host|
-    sudo(host, "mkdir -p /etc/onepush/setup && " +
-      "cd /etc/onepush/setup && " +
+    sudo(host, "mkdir -p /etc/pomodori/setup && " +
+      "cd /etc/pomodori/setup && " +
       "date +%s > last_run_time && " +
-      "echo #{Onepush::VERSION_STRING} > last_run_version")
+      "echo #{Pomodori::VERSION_STRING} > last_run_version")
   end
 end
 
 task :restart_services => :install_essentials do
   log_notice "Restarting services..."
   on roles(:app) do |host|
-    if test("sudo test -e /var/run/onepush/restart_web_server")
-      sudo(host, "rm -f /var/run/onepush/restart_web_server")
+    if test("sudo test -e /var/run/pomodori/restart_web_server")
+      sudo(host, "rm -f /var/run/pomodori/restart_web_server")
       case MANIFEST['web_server_type']
       when 'nginx'
         nginx_info = autodetect_nginx!(host)
@@ -138,7 +138,7 @@ task :restart_services => :install_essentials do
           sudo(host, "/etc/init.d/httpd restart")
         end
       else
-        abort "Unsupported web server. OnePush supports 'nginx' and 'apache'."
+        abort "Unsupported web server. #{POMODORI_APP_NAME} supports 'nginx' and 'apache'."
       end
     end
   end
@@ -188,7 +188,7 @@ task :setup do
   invoke :run_postsetup
   report_progress(13, TOTAL_STEPS)
 
-  invoke :install_onepush_manifest
+  invoke :install_pomodori_manifest
   report_progress(14, TOTAL_STEPS)
   invoke :restart_services
   report_progress(TOTAL_STEPS, TOTAL_STEPS)

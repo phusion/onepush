@@ -17,20 +17,20 @@ task :autodetect_os do
         log_notice "Red Hat #{distro_version} detected."
         host.set(:os, :redhat)
         if distro_version < '6.4'
-          fatal_and_abort "OnePush only supports Red Hat 6.4 and later."
+          fatal_and_abort "#{POMODORI_APP_NAME} only supports Red Hat 6.4 and later."
         end
       elsif info =~ /CentOS/
         log_notice "CentOS #{distro_version} detected."
         host.set(:os, :centos)
         if distro_version < '6.4'
-          fatal_and_abort "OnePush only supports CentOS 6.4 and later."
+          fatal_and_abort "#{POMODORI_APP_NAME} only supports CentOS 6.4 and later."
         end
       elsif info =~ /Amazon/
         log_notice "Amazon Linux #{distro_version} detected."
         host.set(:os, :amazon_linux)
       else
         log_notice "Unknown Red Hat derivative detected."
-        fatal_and_abort "OnePush only supports Red Hat, CentOS and Amazon Linux, not any other Red Hat derivatives."
+        fatal_and_abort "#{POMODORI_APP_NAME} only supports Red Hat, CentOS and Amazon Linux, not any other Red Hat derivatives."
       end
 
     elsif test("[[ -e /etc/system-release ]]") && (info = capture("cat /etc/system-release")) =~ /Amazon/
@@ -64,21 +64,21 @@ task :autodetect_os do
         log_notice "Ubuntu #{distro_version} detected."
         host.set(:os, :ubuntu)
         if distro_version < "12.04"
-          fatal_and_abort "OnePush only supports Ubuntu 12.04 and later."
+          fatal_and_abort "#{POMODORI_APP_NAME} only supports Ubuntu 12.04 and later."
         end
       elsif distributor_id =~ /debian/i
         log_notice "Debian #{distro_version} detected."
         host.set(:os, :debian)
         if distro_version < "7"
-          fatal_and_abort "OnePush only supports Debian 7 and later."
+          fatal_and_abort "#{POMODORI_APP_NAME} only supports Debian 7 and later."
         end
       else
         log_notice "Unknown Debian derivative detected."
-        fatal_and_abort "OnePush only supports Debian and Ubuntu, not any other Debian derivatives."
+        fatal_and_abort "#{POMODORI_APP_NAME} only supports Debian and Ubuntu, not any other Debian derivatives."
       end
 
     else
-      fatal_and_abort "Unsupported server operating system. OnePush only " +
+      fatal_and_abort "Unsupported server operating system. #{POMODORI_APP_NAME} only " +
         "supports Red Hat, CentOS, Amazon Linux, Debian and Ubuntu."
     end
 
@@ -98,8 +98,8 @@ task :autodetect_os do
       log_notice "x86_64 architecture detected."
       host.set(:normalized_arch, "x86_64")
     else
-      fatal_and_abort "Unsupported machine architecture #{arch.inspect}. OnePush only " +
-        "supports x86 and x86_64."
+      fatal_and_abort "Unsupported machine architecture #{arch.inspect}. " +
+        "#{POMODORI_APP_NAME} only supports x86 and x86_64."
     end
   end
 end
@@ -129,7 +129,7 @@ task :install_essentials => :autodetect_os do
   end
 
   on roles(:app, :db) do |host|
-    sudo(host, "mkdir -p /var/run/onepush && chmod 700 /var/run/onepush")
+    sudo(host, "mkdir -p /var/run/pomodori && chmod 700 /var/run/pomodori")
     if host.properties.fetch(:os_class) == :redhat
       enable_epel(host)
       enable_phusion_runit_yum_repo(host)

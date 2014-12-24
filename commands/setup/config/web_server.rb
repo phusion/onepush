@@ -5,12 +5,12 @@ task :install_web_server => [:install_essentials, :install_passenger] do
     when 'nginx'
       install_nginx
       enable_passenger_nginx
-      install_onepush_nginx_vhosts
+      install_pomodori_nginx_vhosts
       install_nginx_service
     when 'apache'
       install_apache
     else
-      abort "Unsupported web server. OnePush supports 'nginx' and 'apache'."
+      abort "Unsupported web server. #{POMODORI_APP_NAME} supports 'nginx' and 'apache'."
     end
   end
 end
@@ -61,7 +61,7 @@ def install_nginx_from_phusion_apt(host)
   end
   apt_get_install(host, %w(nginx-extras))
 
-  sudo(host, "touch /var/run/onepush/restart_web_server")
+  sudo(host, "touch /var/run/pomodori/restart_web_server")
 end
 
 def install_nginx_from_source_with_passenger(host)
@@ -98,7 +98,7 @@ def enable_passenger_nginx
           io.puts(config)
           io.rewind
           sudo_upload(host, io, config_file)
-          sudo(host, "touch /var/run/onepush/restart_web_server")
+          sudo(host, "touch /var/run/pomodori/restart_web_server")
         else
           fatal_and_abort "Unable to modify the Nginx configuration file to enable Phusion Passenger. " +
             "Please do it manually: add the `passenger_root` and `passenger_ruby` directives to " +
@@ -109,11 +109,11 @@ def enable_passenger_nginx
   end
 end
 
-def install_onepush_nginx_vhosts
+def install_pomodori_nginx_vhosts
   if MANIFEST['install_web_server']
     on roles(:app) do |host|
       config_file = autodetect_nginx!(host)[:config_file]
-      include_directive = "include /etc/onepush/apps/*/shared/config/nginx-vhost.conf;"
+      include_directive = "include /etc/pomodori/apps/*/shared/config/nginx-vhost.conf;"
 
       io = StringIO.new
       sudo_download(host, config_file, io)
@@ -129,7 +129,7 @@ def install_onepush_nginx_vhosts
           io.puts(config)
           io.rewind
           sudo_upload(host, io, config_file)
-          sudo(host, "touch /var/run/onepush/restart_web_server")
+          sudo(host, "touch /var/run/pomodori/restart_web_server")
       end
     end
   end
@@ -178,7 +178,7 @@ def install_nginx_service
         log_info "Installing Nginx Runit service."
         script = StringIO.new
         script.puts "#!/bin/bash"
-        script.puts "# Installed by OnePush."
+        script.puts "# Installed by #{POMODORI_APP_NAME}."
         script.puts "set -e"
         script.puts "exec #{nginx_bin}"
         script.rewind
@@ -235,7 +235,7 @@ end
 def install_passenger_apache_module_from_apt(host)
   apt_get_install(host, %w(libapache2-mod-passenger))
   if !test("[[ -e /etc/apache2/mods-enabled/passenger.load ]]")
-    sudo(host, "a2enmod passenger && touch /var/run/onepush/restart_web_server")
+    sudo(host, "a2enmod passenger && touch /var/run/pomodori/restart_web_server")
   end
 end
 
@@ -274,6 +274,6 @@ def install_passenger_apache_module_from_source(host)
     # Install config snippet.
     sudo(host, "#{installer} --snippet > /etc/apache2/mods-available/passenger.load")
     sudo(host, "echo > /etc/apache2/mods-available/passenger.conf")
-    sudo(host, "a2enmod passenger && touch /var/run/onepush/restart_web_server")
+    sudo(host, "a2enmod passenger && touch /var/run/pomodori/restart_web_server")
   end
 end

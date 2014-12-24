@@ -65,8 +65,8 @@ module Pomodori
       set_boolean_default(manifest, 'passenger_enterprise', false)
       set_boolean_default(manifest, 'passenger_force_install_from_source', false)
 
-      manifest['onepush_version'] = VERSION_STRING
-      manifest['onepush_manifest_format_version'] = MANIFEST_FORMAT_VERSION_STRING
+      manifest['pomodori_version'] = VERSION_STRING
+      manifest['pomodori_manifest_format_version'] = MANIFEST_FORMAT_VERSION_STRING
 
       # Bug check
       ALL_PROPERTIES.each do |name|

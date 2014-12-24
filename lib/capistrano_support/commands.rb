@@ -46,18 +46,18 @@ module Pomodori
           if !host.properties.fetch(:sudo_checked)
             if test("[[ -e /usr/bin/sudo ]]")
               if !test("/usr/bin/sudo -k -n true")
-                fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, OnePush " +
+                fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, #{POMODORI_APP_NAME} " +
                   "needs sudo to *not* ask for a password. Please *temporarily* configure " +
                   "sudo to allow the '#{host.user}' user to run it without a password.\n\n" +
                   "Open the sudo configuration file:\n" +
                   "  sudo visudo\n\n" +
                   "Then insert:\n" +
-                  "  # Remove this entry later. OnePush only needs it temporarily.\n" +
+                  "  # Remove this entry later. #{POMODORI_APP_NAME} only needs it temporarily.\n" +
                   "  #{host.user} ALL=(ALL) NOPASSWD: ALL"
               end
               host.properties.set(:sudo_checked, true)
             else
-              fatal_and_abort "OnePush requires 'sudo' to be installed on the server. Please install it first."
+              fatal_and_abort "#{POMODORI_APP_NAME} requires 'sudo' to be installed on the server. Please install it first."
             end
           end
           "/usr/bin/sudo -k -n -H #{b(command, options)}"
@@ -74,7 +74,7 @@ module Pomodori
       end
 
       def mktempdir(host)
-        tmpdir = capture("mktemp -d /tmp/onepush.XXXXXXXX").strip
+        tmpdir = capture("mktemp -d /tmp/pomodori.XXXXXXXX").strip
         begin
           yield tmpdir
         ensure
@@ -133,7 +133,7 @@ module Pomodori
               apt_get_update(host)
             end
           end
-          sudo(host, "apt-get install -y #{packages.join(' ')}")
+          sudo(host, "apt-get install -y -q #{packages.join(' ')}")
         end
         packages.size
       end
@@ -209,7 +209,7 @@ module Pomodori
 
       def autodetect_nginx!(host)
         autodetect_nginx(host) ||
-          fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in OnePush. " +
+          fatal_and_abort("Cannot autodetect Nginx. This is probably a bug in #{POMODORI_APP_NAME}. " +
             "Please report this to the authors.")
       end
 
@@ -252,7 +252,7 @@ module Pomodori
 
       def autodetect_passenger!(host)
         autodetect_passenger(host) || \
-          fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in OnePush. " +
+          fatal_and_abort("Cannot autodetect Phusion Passenger. This is probably a bug in #{POMODORI_APP_NAME}. " +
             "Please report this to the authors.")
       end
 
@@ -287,7 +287,7 @@ module Pomodori
       def autodetect_ruby_interpreter_for_passenger!(host)
         autodetect_ruby_interpreter_for_passenger(host) || \
           fatal_and_abort("Unable to find a Ruby interpreter on the system. This is probably " +
-            "a bug in OnePush. Please report this to the authors.")
+            "a bug in #{POMODORI_APP_NAME}. Please report this to the authors.")
       end
 
 
@@ -352,7 +352,7 @@ module Pomodori
         report_progress(1, TOTAL_STEPS)
 
         if !check_server_setup_and_return_result(host, true)
-          fatal_and_abort "The server must be re-setup. Please run 'onepush setup'."
+          fatal_and_abort "The server must be re-setup. Please run 'pomodori setup'."
         end
       end
 
@@ -362,7 +362,7 @@ module Pomodori
 
         # Infer app dir
         begin
-          app_dir = capture("readlink /etc/onepush/apps/#{id}; true").strip
+          app_dir = capture("readlink /etc/pomodori/apps/#{id}; true").strip
         rescue Net::SSH::AuthenticationFailed => e
           if last_chance
             raise e
@@ -375,13 +375,13 @@ module Pomodori
           return false
         end
         set(:deploy_to, app_dir)
-        set(:repo_url, "#{app_dir}/onepush_repo")
+        set(:repo_url, "#{app_dir}/pomodori_repo")
 
         # Download previous setup manifest
         io = StringIO.new
         download!("#{app_dir}/onepush-setup.json", io)
         server_manifest = JSON.parse(io.string)
-        set(:onepush_manifest, server_manifest)
+        set(:pomodori_manifest, server_manifest)
 
         # Check whether the requested Ruby version is installed
         if MANIFEST['ruby_version']
@@ -396,8 +396,8 @@ module Pomodori
         end
 
         # Check whether anything else has been changed, and thus requires
-        # a new 'onepush setup' call
-        Onepush::CHANGEABLE_PROPERTIES.each do |name|
+        # a new 'pomodori setup' call
+        Pomodori::CHANGEABLE_PROPERTIES.each do |name|
           if MANIFEST[name] != server_manifest[name]
             return false
           end

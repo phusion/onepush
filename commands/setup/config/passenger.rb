@@ -34,11 +34,11 @@ def check_passenger_version_supported(host)
   version = capture("#{passenger_info[:config_command]} --version").strip
   if Gem::Version.new(version) < Gem::Version.new("4.0.45")
     fatal_and_abort "Your server already has Phusion Passenger version #{version} " +
-      "installed. OnePush requires Passenger 4.0.45 or later, but it currently " +
+      "installed. #{POMODORI_APP_NAME} requires Passenger 4.0.45 or later, but it currently " +
       "does not support automatically upgrading Passenger. There are two things you can do:\n\n" +
       " 1. Upgrade Passenger manually. You can find upgrade instructions in the official Passenger manuals: " +
           "https://www.phusionpassenger.com/documentation\n" +
-      " 2. Uninstall Passenger, so that OnePush can install Passenger from scratch."
+      " 2. Uninstall Passenger, so that #{POMODORI_APP_NAME} can install Passenger from scratch."
   end
 end
 
@@ -151,7 +151,7 @@ def maybe_add_passenger_bindir_to_path(host)
 
   if !installed_from_system_package && test("[[ -e /etc/profile.d && ! -e /etc/profile.d/passenger.sh ]]")
     io = StringIO.new
-    io.puts "# Installed by OnePush."
+    io.puts "# Installed by #{POMODORI_APP_NAME}."
     io.puts "export PATH=$PATH:#{bindir}"
     io.rewind
 

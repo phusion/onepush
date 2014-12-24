@@ -10,6 +10,8 @@ CONFIG_TEXT = ENV['POMODORI_CONFIG'] || abort("POMODORI_CONFIG must be set.")
 CONFIG      = Hashie::Mash.new(JSON.parse(CONFIG_TEXT))
 MANIFEST    = CONFIG['manifest'] || {}
 
+POMODORI_APP_NAME = CONFIG.pomodori_app_name || "Pomodori"
+
 CONFIG.progress_base ||= 0
 CONFIG.progress_ceil ||= 1
 $current_progress = 0
