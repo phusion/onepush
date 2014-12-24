@@ -2,10 +2,12 @@
 require 'optparse'
 
 ROOT = File.absolute_path(File.dirname(__FILE__) + "/..")
-ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"
 STDOUT.sync = STDERR.sync = true
 
-require 'bundler/setup'
+if !defined?(Bundler)
+  ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"
+  require 'bundler/setup'
+end
 
 module Pomodori
   class App
