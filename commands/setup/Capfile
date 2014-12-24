@@ -1,6 +1,6 @@
 STDOUT.sync = STDERR.sync = true
 require 'capistrano/setup'
-import '../lib/capistrano_support.rb'
+import '../../lib/capistrano_support.rb'
 import 'config/essentials.rb'
 import 'config/language_runtime.rb'
 import 'config/passenger.rb'

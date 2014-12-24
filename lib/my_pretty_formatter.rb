@@ -1,7 +1,7 @@
 require 'sshkit/formatters/pretty'
 require 'colorize'
 
-module Onepush
+module Pomodori
   # Fixes SSHKit's Pretty formatter so that it doesn't colorize
   # output when outputting to a non-TTY.
   class MyPrettyFormatter < SSHKit::Formatter::Pretty

@@ -1,6 +1,6 @@
-require_relative 'version'
+require_relative './version'
 
-module Onepush
+module Pomodori
   # Properties that are used when a server is setup for the first time,
   # but which will have no effect on subsequent setup calls.
   UNCHANGEABLE_PROPERTIES = %w(

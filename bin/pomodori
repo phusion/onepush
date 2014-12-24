@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+require 'optparse'
+
+ROOT = File.absolute_path(File.dirname(__FILE__) + "/..")
+ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"
+STDOUT.sync = STDERR.sync = true
+
+require 'bundler/setup'
+
+module Pomodori
+  class App
+    def initialize(argv)
+      @argv = argv.dup
+    end
+
+    def run
+      prepare
+      dispatch_command
+    end
+
+  private
+    def prepare
+      @command = @argv[0]
+      @argv.shift
+    end
+
+    def dispatch_command
+      case @command
+      when "setup"
+        require_relative '../commands/setup/command'
+        Pomodori::Commands::SetupCommand.new(@argv).run
+      when "deploy"
+        require_relative '../commands/deploy/command'
+        Pomodori::Commands::DeployCommand.new(@argv).run
+      when "help", "-h", "--help"
+        help
+      else
+        help
+        exit(1)
+      end
+    end
+
+    def help
+      puts "Usage: pomodori <setup|deploy> [options...]"
+      puts
+      puts "Type pomodori <COMMAND> --help for more information."
+    end
+  end
+end
+
+Pomodori::App.new(ARGV).run

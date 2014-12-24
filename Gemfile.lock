@@ -1,3 +1,12 @@
+GIT
+  remote: git://github.com/phusion/sshkit.git
+  revision: b55f6511364c560ee82dcecbcfe5b08d386969ae
+  specs:
+    sshkit (1.6.1)
+      colorize (>= 0.7.0)
+      net-scp (>= 1.1.2)
+      net-ssh (>= 2.8.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -14,7 +23,8 @@ GEM
     capistrano-rvm (0.1.1)
       capistrano (~> 3.0)
       sshkit (~> 1.2)
-    colorize (0.7.3)
+    colorize (0.7.5)
+    hashie (3.3.2)
     highline (1.6.21)
     i18n (0.6.9)
     json (1.8.1)
@@ -22,10 +32,6 @@ GEM
       net-ssh (>= 2.6.5)
     net-ssh (2.9.1)
     rake (10.3.2)
-    sshkit (1.5.1)
-      colorize
-      net-scp (>= 1.1.2)
-      net-ssh (>= 2.8.0)
 
 PLATFORMS
   ruby
@@ -35,5 +41,7 @@ DEPENDENCIES
   capistrano-bundler
   capistrano-rails
   capistrano-rvm
+  hashie
   highline
   json
+  sshkit!

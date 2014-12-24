@@ -5,15 +5,11 @@ require 'securerandom'
 require 'shellwords'
 require 'net/http'
 require 'net/https'
-require_relative '../../lib/config'
-require_relative '../../lib/version'
+require_relative '../../../lib/config'
+require_relative '../../../lib/version'
 
-fatal_and_abort "The APP_ROOT option must be set" if !ENV['APP_ROOT']
-fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MANIFEST_JSON']
-
-MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
 check_manifest_requirements(MANIFEST)
-Onepush.set_manifest_defaults(MANIFEST)
+Pomodori.set_manifest_defaults(MANIFEST)
 
 TOTAL_STEPS = 15
 
@@ -23,8 +19,8 @@ set :pty, true
 
 
 after :production, :initialize_onepush do
-  Dir.chdir(ENV['APP_ROOT'])
-  initialize_onepush_capistrano
+  Dir.chdir(CONFIG.app_root)
+  Pomodori::CapistranoSupport.initialize!
   on roles(:app, :db) do |host|
     log_notice "Setting up server: #{host}"
   end

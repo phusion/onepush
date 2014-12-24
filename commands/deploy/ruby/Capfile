@@ -1,6 +1,5 @@
 STDOUT.sync = STDERR.sync = true
 require 'capistrano/setup'
 require 'capistrano/deploy'
-require 'json'
-import '../lib/capistrano_support.rb'
+import '../../lib/capistrano_support.rb'
 import 'config/initialize.rb'
