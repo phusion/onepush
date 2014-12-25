@@ -108,7 +108,7 @@ module Pomodori
     def to_server_app_config
       result = to_hash
       result['pomodori_version'] = VERSION_STRING
-      result['pomodori_app_config_format_version'] = APP_CONFIG_FORMAT_VERSION_STRING
+      result['pomodori_setup_version'] = SETUP_VERSION
       result
     end
   end

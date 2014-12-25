@@ -1,7 +1,7 @@
 task :autodetect_os do
   log_notice "Autodetecting operating system..."
   on roles(:app, :db) do |host|
-    if test("[[ -e /etc/redhat-release || -e /etc/centos-release ]]")
+    if test_cond("-e /etc/redhat-release || -e /etc/centos-release")
       host.set(:os_class, :redhat)
 
       info = capture("cat /etc/redhat-release").gsub("\r\n", "\n")
@@ -33,7 +33,7 @@ task :autodetect_os do
         fatal_and_abort "#{POMODORI_APP_NAME} only supports Red Hat, CentOS and Amazon Linux, not any other Red Hat derivatives."
       end
 
-    elsif test("[[ -e /etc/system-release ]]") && (info = capture("cat /etc/system-release")) =~ /Amazon/
+    elsif test_cond("-e /etc/system-release") && (info = capture("cat /etc/system-release")) =~ /Amazon/
       host.set(:os_class, :redhat)
       host.set(:os, :amazon_linux)
 
@@ -47,7 +47,7 @@ task :autodetect_os do
         fatal_and_abort "Unable to autodetect Amazon Linux version."
       end
 
-    elsif test("[[ -e /usr/bin/apt-get ]]")
+    elsif test_cond("-e /usr/bin/apt-get")
       host.set(:os_class, :debian)
       apt_get_install(host, %w(lsb-release))
 
@@ -141,7 +141,7 @@ task :install_essentials => :autodetect_os do
 end
 
 def enable_epel(host)
-  if !test("[[ -e /etc/yum.repos.d/epel.repo ]]")
+  if !test_cond("-e /etc/yum.repos.d/epel.repo")
     case host.properties.fetch(:normalized_arch)
     when "x86"
       epel_arch = "i386"
@@ -181,7 +181,7 @@ def enable_epel(host)
 end
 
 def enable_phusion_runit_yum_repo(host)
-  if !test("[[ -e /etc/yum.repos.d/phusion-runit.repo ]]")
+  if !test_cond("-e /etc/yum.repos.d/phusion-runit.repo")
     case host.properties.fetch(:normalized_arch)
     when "x86"
       epel_arch = "i386"

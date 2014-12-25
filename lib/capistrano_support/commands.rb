@@ -18,7 +18,7 @@ module Pomodori
           b(command, options)
         else
           if !host.properties.fetch(:sudo_checked)
-            if test("[[ -e /usr/bin/sudo ]]")
+            if test_cond("-e /usr/bin/sudo")
               if !test("/usr/bin/sudo -k -n true")
                 fatal_and_abort "Sudo needs a password for the '#{host.user}' user. However, #{POMODORI_APP_NAME} " +
                   "needs sudo to *not* ask for a password. Please *temporarily* configure " +
@@ -36,6 +36,13 @@ module Pomodori
           end
           "/usr/bin/sudo -k -n -H #{b(command, options)}"
         end
+      end
+
+      # A portable way to run condition tests using `[[`.
+      # Unlike `test("[[ ... ]]")`, this method works both over
+      # SSH and locally.
+      def test_cond(condition)
+        test(b "[[ #{condition} ]]")
       end
 
       def b(script, options = {})

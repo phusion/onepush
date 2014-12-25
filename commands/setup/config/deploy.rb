@@ -70,9 +70,9 @@ task :restart_services => :install_essentials do
           sudo(host, nginx_info[:restart_command])
         end
       when 'apache'
-        if test("[[ -e /etc/init.d/apache2 ]]")
+        if test_cond("-e /etc/init.d/apache2")
           sudo(host, "/etc/init.d/apache2 restart")
-        elsif test("[[ -e /etc/init.d/httpd ]]")
+        elsif test_cond("-e /etc/init.d/httpd")
           sudo(host, "/etc/init.d/httpd restart")
         end
       else

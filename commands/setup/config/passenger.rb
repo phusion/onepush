@@ -55,7 +55,7 @@ def passenger_apt_repo_available?(codename)
 end
 
 def install_passenger_from_apt(host, codename)
-  if !test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
+  if !test_cond("-e /etc/apt/sources.list.d/passenger.list")
     config = StringIO.new
     if APP_CONFIG.passenger_enterprise
       config.puts "deb https://download:#{MANIFEST['passenger_enterprise_download_token']}@" +
@@ -85,7 +85,7 @@ def install_passenger_from_source(host)
   _install_passenger_source_dependencies(host)
 
   # Install Passenger.
-  if !test("[[ -e /opt/passenger/current ]]")
+  if !test_cond("-e /opt/passenger/current")
     mktempdir(host) do |tmpdir|
       # Download tarball and infer directory name.
       passenger_tarball_url = "https://www.phusionpassenger.com/latest_stable_tarball"
@@ -153,7 +153,7 @@ def maybe_add_passenger_bindir_to_path(host)
   installed_from_system_package = passenger_info[:installed_from_system_package]
   bindir = passenger_info[:bindir]
 
-  if !installed_from_system_package && test("[[ -e /etc/profile.d && ! -e /etc/profile.d/passenger.sh ]]")
+  if !installed_from_system_package && test_cond("-e /etc/profile.d && ! -e /etc/profile.d/passenger.sh")
     io = StringIO.new
     io.puts "# Installed by #{POMODORI_APP_NAME}."
     io.puts "export PATH=$PATH:#{bindir}"

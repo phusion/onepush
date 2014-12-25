@@ -22,7 +22,7 @@ def _install_ruby_runtime(host)
 end
 
 def install_or_upgrade_rvm(host)
-  if !test("[[ -e /usr/local/rvm/bin/rvm ]]")
+  if !test_cond("-e /usr/local/rvm/bin/rvm")
     instal_rvm(host)
   else
     rvm_version = capture("/usr/local/rvm/bin/rvm --version").strip.split(" ")[1]
@@ -42,7 +42,7 @@ def install_or_upgrade_rvm(host)
     sudo(host, "/usr/local/rvm/bin/rvm install #{ruby_version}")
   end
 
-  if !test("[[ -h /usr/local/rvm/rubies/default ]]")
+  if !test_cond("-h /usr/local/rvm/rubies/default")
     rubies = capture("ls -1d /usr/local/rvm/rubies/ruby-* 2>/dev/null; true")
     rubies = rubies.split(/\r?\n/).map { |x| File.basename(x) }.sort
     if rubies.empty?

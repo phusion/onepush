@@ -21,7 +21,7 @@ module Pomodori
               "threshold=`date +%s` && " +
               "(( threshold = threshold - #{two_days} )) && " +
               '[[ "$timestamp" -gt "$threshold" ]]'
-            if !test(script)
+            if !test(b(script))
               apt_get_update(host)
             end
           end

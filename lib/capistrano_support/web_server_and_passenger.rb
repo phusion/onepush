@@ -4,7 +4,7 @@ module Pomodori
       def autodetect_nginx(host)
         cache(host, :nginx) do
           result = {}
-          if test("[[ -e /usr/sbin/nginx && -e /etc/nginx/nginx.conf ]]")
+          if test_cond("-e /usr/sbin/nginx && -e /etc/nginx/nginx.conf")
             result[:installed_from_system_package] = true
             result[:binary]      = "/usr/bin/nginx"
             result[:config_file] = "/etc/nginx/nginx.conf"
@@ -40,14 +40,14 @@ module Pomodori
         cache(host, :passenger) do
           ruby   = autodetect_ruby_interpreter_for_passenger(host)
           result = { :ruby => ruby }
-          if test("[[ -e /usr/bin/passenger-config ]]")
+          if test_cond("-e /usr/bin/passenger-config")
             result[:installed_from_system_package] = true
             result[:bindir]            = "/usr/bin"
             result[:nginx_installer]   = "/usr/bin/passenger-install-nginx-module"
             result[:apache2_installer] = "/usr/bin/passenger-install-apache2-module"
             result[:config_command]    = "/usr/bin/passenger-config"
             result
-          elsif test("[[ -e /opt/passenger/current/bin/passenger-config ]]")
+          elsif test_cond("-e /opt/passenger/current/bin/passenger-config")
             result[:bindir]            = "/opt/passenger/current/bin"
             result[:nginx_installer]   = "#{ruby} /opt/passenger/current/bin/passenger-install-nginx-module".strip
             result[:apache2_installer] = "#{ruby} /opt/passenger/current/bin/passenger-install-apache2-module".strip
@@ -98,7 +98,7 @@ module Pomodori
           end
           result = nil
           possibilities.each do |possibility|
-            if test("[[ -e #{possibility} ]]")
+            if test_cond("-e #{possibility}")
               result = possibility
               break
             end

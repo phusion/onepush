@@ -51,7 +51,7 @@ def ensure_nginx_has_passenger_support(host)
 end
 
 def should_install_nginx_from_phusion_apt?
-  test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
+  test_cond("-e /etc/apt/sources.list.d/passenger.list")
 end
 
 def install_nginx_from_phusion_apt(host)
@@ -187,7 +187,7 @@ def install_nginx_service
         sudo_upload(host, config, config_file)
       end
 
-      if !test("[[ -e /etc/service/nginx/run ]]")
+      if !test_cond("-e /etc/service/nginx/run")
         log_info "Installing Nginx Runit service."
         script = StringIO.new
         script.puts "#!/bin/bash"
@@ -242,12 +242,12 @@ def install_passenger_apache_module
 end
 
 def should_install_passenger_apache_module_from_apt?
-  test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
+  test_cond("-e /etc/apt/sources.list.d/passenger.list")
 end
 
 def install_passenger_apache_module_from_apt(host)
   apt_get_install(host, %w(libapache2-mod-passenger))
-  if !test("[[ -e /etc/apache2/mods-enabled/passenger.load ]]")
+  if !test_cond("-e /etc/apache2/mods-enabled/passenger.load")
     sudo(host, "a2enmod passenger && touch /var/run/pomodori/restart_web_server")
   end
 end
@@ -279,7 +279,7 @@ def install_passenger_apache_module_from_source(host)
     if host.properties.fetch(:os_class) == :redhat
       # Set proper SELinux permissions.
       passenger_root = capture("#{passenger_config} --root").strip
-      if test("[[ -d #{passenger_root} ]]")
+      if test_cond("-d #{passenger_root}")
         sudo(host, "chcon -R -h -t httpd_sys_content_t #{passenger_root}")
       end
     end
