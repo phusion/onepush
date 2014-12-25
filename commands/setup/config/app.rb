@@ -1,14 +1,14 @@
 task :create_app_user => :install_essentials do
   log_notice "Creating user account for app..."
   on roles(:app) do |host|
-    name = MANIFEST['user']
+    name = APP_CONFIG.user
 
     if !test("id -u #{name} >/dev/null 2>&1")
       create_user(host, name)
     end
-    case MANIFEST['type']
+    case APP_CONFIG.type
     when 'ruby'
-      case MANIFEST['ruby_manager']
+      case APP_CONFIG.ruby_manager
       when 'rvm'
         sudo(host, "usermod -a -G rvm #{name}")
       end
@@ -18,16 +18,16 @@ task :create_app_user => :install_essentials do
     sudo(host, "chown #{name}: /home/#{name}/.ssh && " +
       "chmod 700 /home/#{name}/.ssh")
 
-    keys = MANIFEST['deployment_ssh_keys'].join("\n")
-    sudo_edit_section(host, "/home/#{name}/.ssh/authorized_keys",
+    keys = APP_CONFIG.deployment_ssh_keys.join("\n")
+    sudo_edit_file_section(host, "/home/#{name}/.ssh/authorized_keys",
       "PHUSION POMODORI/ONEPUSH KEYS", keys, :chown => "#{name}:", :chmod => 700)
   end
 end
 
 task :create_app_dir => [:install_essentials, :create_app_user] do
   log_notice "Creating directory for app..."
-  path  = MANIFEST['app_dir']
-  owner = MANIFEST['user']
+  path  = APP_CONFIG.app_dir
+  owner = APP_CONFIG.user
 
   primary_dirs       = "#{path} #{path}/releases #{path}/shared"
   shared_subdirs     = "#{path}/shared/config #{path}/shared/public/system #{path}/shared/public/assets"
@@ -45,13 +45,13 @@ end
 
 task :create_app_vhost => [:create_app_dir] do
   log_notice "Creating web server virtual host for app..."
-  app_dir = MANIFEST['app_dir']
-  user    = MANIFEST['user']
+  app_dir = APP_CONFIG.app_dir
+  user    = APP_CONFIG.user
   shared_dir = "#{app_dir}/shared"
   local_conf = "#{shared_dir}/config/nginx-vhost-local.conf"
 
-  if MANIFEST['type'] == 'ruby' && MANIFEST['ruby_manager'] == 'rvm'
-    ruby_version = MANIFEST['ruby_version'] || 'default'
+  if APP_CONFIG.type == 'ruby' && APP_CONFIG.ruby_manager == 'rvm'
+    ruby_version = APP_CONFIG.ruby_version || 'default'
     script = StringIO.new
     script.puts "#!/bin/bash"
     script.puts "# Installed by #{POMODORI_APP_NAME}."
@@ -64,15 +64,13 @@ task :create_app_vhost => [:create_app_dir] do
     "Changes will be overwritten. Edit nginx-vhost-local.conf instead."
   config.puts "server {"
   config.puts "    listen 80;"
-  config.puts "    server_name #{MANIFEST['domain_names']};"
+  config.puts "    server_name #{APP_CONFIG.domain_names};"
   config.puts "    root #{app_dir}/current/public;"
-  if MANIFEST['install_passenger']
-    config.puts "    passenger_enabled on;"
-    if MANIFEST['type'] == 'ruby' && MANIFEST['ruby_manager'] == 'rvm'
-      config.puts "    passenger_ruby #{shared_dir}/ruby;"
-    end
-    config.puts "    passenger_user #{user};"
+  config.puts "    passenger_enabled on;"
+  if APP_CONFIG.type == 'ruby' && APP_CONFIG.ruby_manager == 'rvm'
+    config.puts "    passenger_ruby #{shared_dir}/ruby;"
   end
+  config.puts "    passenger_user #{user};"
   config.puts "    include #{local_conf};"
   config.puts "}"
   config.rewind
@@ -83,7 +81,7 @@ task :create_app_vhost => [:create_app_dir] do
   local.rewind
 
   on roles(:app) do |host|
-    if MANIFEST['type'] == 'ruby' && MANIFEST['ruby_manager'] == 'rvm'
+    if APP_CONFIG.type == 'ruby' && APP_CONFIG.ruby_manager == 'rvm'
       sudo_upload(host, script, "#{shared_dir}/ruby",
         :chown => "#{user}:",
         :chmod => "755")

@@ -5,11 +5,8 @@ require 'securerandom'
 require 'shellwords'
 require 'net/http'
 require 'net/https'
-require_relative '../../../lib/config'
+require_relative '../../../lib/app_config'
 require_relative '../../../lib/version'
-
-check_manifest_requirements(MANIFEST)
-Pomodori.set_manifest_defaults(MANIFEST)
 
 TOTAL_STEPS = 15
 
@@ -19,7 +16,6 @@ set :pty, true
 
 
 after :production, :initialize_pomodori do
-  Dir.chdir(CONFIG.app_root)
   Pomodori::CapistranoSupport.initialize!
   on roles(:app, :db) do |host|
     log_notice "Setting up server: #{host}"
@@ -27,82 +23,24 @@ after :production, :initialize_pomodori do
 end
 
 
-def _check_resetup_necessary(host)
-  id       = MANIFEST['id']
-  app_dir  = MANIFEST['app_dir']
-  pomodori_repo_path   = "#{app_dir}/pomodori_repo"
-  server_manifest_path = "#{app_dir}/onepush-setup.json"
-
-  if !sudo_test(host, "[[ -e #{pomodori_repo_path} && -e /etc/pomodori/apps/#{id} && -e #{server_manifest_path} ]]")
-    return true
-  end
-
-  server_manifest_str = sudo_download_to_string(host, server_manifest_path)
-  begin
-    server_manifest = JSON.parse(server_manifest_str)
-  rescue JSON::ParserError
-    log_warn("The manifest file on the server (#{server_manifest_path}) is " +
-      "corrupted. Will re-setup server in order to fix things.")
-    return true
-  end
-
-  Pomodori::CHANGEABLE_PROPERTIES.each do |name|
-    if MANIFEST[name] != server_manifest[name]
-      log_warn("Onepush.json has changed. Will re-setup server.")
-      return true
-    end
-  end
-
-  if MANIFEST['type'] == 'ruby' && MANIFEST['ruby_manager'] == 'rvm'
-    ruby_version = MANIFEST['ruby_version']
-    if !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
-      log_warn("Ruby version #{ruby_version} not installed. Will re-setup server.")
-      return true
-    end
-  end
-
-  false
-end
-
-task :check_resetup_necessary => :install_essentials do
-  if ENV['IF_NEEDED']
-    mutex  = Mutex.new
-    states = []
-
-    on roles(:app) do |host|
-      should_resetup = _check_resetup_necessary(host)
-      mutex.synchronize { states << should_resetup }
-    end
-
-    if states.all? { |should_resetup| !should_resetup }
-      log_info "Server setup is up-to-date. Skipping full setup process."
-      report_progress(TOTAL_STEPS, TOTAL_STEPS)
-      exit
-    end
-  end
-end
-
 task :run_postsetup => :install_essentials do
   log_notice "Running post-setup scripts..."
   on roles(:app, :db) do |host|
-    MANIFEST['postsetup_script'].each do |script|
+    APP_CONFIG.postsetup_script.each do |script|
       sudo(host, script, :pipefail => false)
     end
   end
 end
 
-task :install_pomodori_manifest => :install_essentials do
-  log_notice "Saving setup information..."
-  id      = MANIFEST['id']
-  app_dir = MANIFEST['app_dir']
-
-  config = StringIO.new
-  config.puts JSON.dump(MANIFEST)
-  config.rewind
+task :update_pomodori_app_config_on_server => :install_essentials do
+  log_notice "Saving app config information..."
+  id      = PARAMS.app_id
+  app_dir = APP_CONFIG.app_dir
+  config  = JSON.pretty_generate(APP_CONFIG.to_server_app_config)
 
   on roles(:app) do |host|
-    user = MANIFEST['user']
-    sudo_upload(host, config, "#{app_dir}/onepush-setup.json",
+    user = APP_CONFIG.user
+    sudo_upload(host, config, "#{app_dir}/pomodori-app-config.json",
       :chown => "#{user}:",
       :chmod => "600")
     sudo(host, "mkdir -p /etc/pomodori/apps && " +
@@ -124,7 +62,7 @@ task :restart_services => :install_essentials do
   on roles(:app) do |host|
     if test("sudo test -e /var/run/pomodori/restart_web_server")
       sudo(host, "rm -f /var/run/pomodori/restart_web_server")
-      case MANIFEST['web_server_type']
+      case APP_CONFIG.web_server_type
       when 'nginx'
         nginx_info = autodetect_nginx!(host)
         sudo(host, nginx_info[:configtest_command])
@@ -172,11 +110,15 @@ task :setup do
   invoke :install_dbms
   report_progress(9, TOTAL_STEPS)
 
-  setup_database(MANIFEST['database_type'], MANIFEST['database_name'],
-    MANIFEST['database_user'])
-  create_app_database_config(MANIFEST['app_dir'], MANIFEST['user'],
-    MANIFEST['database_type'], MANIFEST['database_name'],
-    MANIFEST['database_user'])
+  setup_database(APP_CONFIG.database_type,
+    APP_CONFIG.database_name,
+    APP_CONFIG.database_user)
+  create_app_database_config(
+    APP_CONFIG.app_dir,
+    APP_CONFIG.user,
+    APP_CONFIG.database_type,
+    APP_CONFIG.database_name,
+    APP_CONFIG.database_user)
   report_progress(10, TOTAL_STEPS)
 
   invoke :install_additional_services
@@ -188,7 +130,7 @@ task :setup do
   invoke :run_postsetup
   report_progress(13, TOTAL_STEPS)
 
-  invoke :install_pomodori_manifest
+  invoke :update_pomodori_app_config_on_server
   report_progress(14, TOTAL_STEPS)
   invoke :restart_services
   report_progress(TOTAL_STEPS, TOTAL_STEPS)

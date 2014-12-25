@@ -106,12 +106,14 @@ end
 
 task :install_essentials => :autodetect_os do
   log_notice "Installing essentials..."
+
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
     when :redhat
       yum_install(host, %w(coreutils git sudo curl which gcc gcc-c++ make))
     when :debian
-      apt_get_install(host, %w(coreutils git sudo curl debianutils apt-transport-https ca-certificates lsb-release build-essential))
+      apt_get_install(host, %w(coreutils git sudo curl debianutils apt-transport-https
+        ca-certificates gnupg lsb-release build-essential))
     else
       raise "Bug"
     end

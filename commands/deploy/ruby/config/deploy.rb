@@ -58,7 +58,7 @@ namespace :deploy do
 
 
   ###### Progress reporting hooks ######
-  
+
   before :starting, :report_progress_starting do
     log_notice "Running sanity checks..."
     report_progress(2, TOTAL_STEPS)

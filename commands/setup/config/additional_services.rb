@@ -2,7 +2,7 @@ task :install_additional_services => :install_essentials do
   log_notice "Installing additional services..."
 
   on roles(:app) do |host|
-    if MANIFEST['memcached']
+    if APP_CONFIG.memcached
       case host.properties.fetch(:os_class)
       when :redhat
         yum_install(host, %w(memcached))
@@ -12,7 +12,7 @@ task :install_additional_services => :install_essentials do
         raise "Bug"
       end
     end
-    if MANIFEST['redis']
+    if APP_CONFIG.redis
       case host.properties.fetch(:os_class)
       when :redhat
         yum_install(host, %w(redis))

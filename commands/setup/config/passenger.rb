@@ -1,5 +1,5 @@
 task :install_passenger => :install_essentials do
-  if MANIFEST['install_passenger']
+  if PARAMS.install_passenger
     log_notice "Installing Phusion Passenger application server..."
     on roles(:app) do |host|
       if passenger_installed?(host)
@@ -43,7 +43,7 @@ def check_passenger_version_supported(host)
 end
 
 def can_install_passenger_from_apt_repo?(codename)
-  !MANIFEST['passenger_force_install_from_source'] && passenger_apt_repo_available?(codename)
+  !PARAMS.force_install_passenger_from_source && passenger_apt_repo_available?(codename)
 end
 
 def passenger_apt_repo_available?(codename)
@@ -57,7 +57,7 @@ end
 def install_passenger_from_apt(host, codename)
   if !test("[[ -e /etc/apt/sources.list.d/passenger.list ]]")
     config = StringIO.new
-    if MANIFEST['passenger_enterprise']
+    if APP_CONFIG.passenger_enterprise
       config.puts "deb https://download:#{MANIFEST['passenger_enterprise_download_token']}@" +
         "www.phusionpassenger.com/enterprise_apt #{codename} main"
     else
@@ -71,7 +71,7 @@ def install_passenger_from_apt(host, codename)
     apt_get_update(host)
   end
 
-  if MANIFEST['passenger_enterprise']
+  if APP_CONFIG.passenger_enterprise
     sudo(host, "chmod 600 /etc/apt/sources.list.d/passenger.list")
     apt_get_install(host, %w(passenger-enterprise))
   else
@@ -91,6 +91,10 @@ def install_passenger_from_source(host)
       passenger_tarball_url = "https://www.phusionpassenger.com/latest_stable_tarball"
       execute("curl --fail --silent -L -o #{tmpdir}/passenger.tar.gz #{passenger_tarball_url}")
       dirname = capture("tar tzf #{tmpdir}/passenger.tar.gz | head -n 1").strip.sub(/\/$/, '')
+      if dirname.empty?
+        log_error "There is something wrong with the downloaded archive."
+        abort
+      end
 
       # Extract tarball.
       sudo(host, "mkdir -p /opt/passenger && " +
@@ -116,7 +120,7 @@ end
 
 def _install_passenger_source_dependencies(host)
   # Install a Ruby runtime for Passenger.
-  if MANIFEST['type'] == 'ruby'
+  if APP_CONFIG.type == 'ruby'
     # This also ensures that Rake is installed.
     _install_ruby_runtime(host)
   else

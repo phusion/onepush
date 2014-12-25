@@ -30,8 +30,10 @@ module Pomodori
         end
       end
 
-      def build_environment_config
-        ENV['POMODORI_CONFIG'] = JSON.generate(@options)
+      def setup_paint_mode
+        if !STDOUT.tty?
+          Paint.mode = 0
+        end
       end
     end
   end

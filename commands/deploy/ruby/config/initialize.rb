@@ -7,10 +7,6 @@ require 'json'
 fatal_and_abort "Please set the APP_ROOT environment variable" if !ENV['APP_ROOT']
 fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MANIFEST_JSON']
 
-MANIFEST = JSON.parse(ENV['MANIFEST_JSON'])
-check_manifest_requirements(MANIFEST)
-Onepush.set_manifest_defaults(MANIFEST)
-
 TOTAL_STEPS = 11
 
 # If Capistrano is terminated, having a PTY will allow

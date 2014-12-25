@@ -1,4 +1,10 @@
 GIT
+  remote: git://github.com/intridea/hashie.git
+  revision: f42367e30e6a868ce117b143729b02d5f2c0a279
+  specs:
+    hashie (3.3.3)
+
+GIT
   remote: git://github.com/phusion/sshkit.git
   revision: b55f6511364c560ee82dcecbcfe5b08d386969ae
   specs:
@@ -26,13 +32,13 @@ GEM
       sshkit (~> 1.2)
     capistrano-stats (1.1.1)
     colorize (0.7.5)
-    hashie (3.3.2)
     highline (1.6.21)
     i18n (0.7.0)
     json (1.8.1)
     net-scp (1.2.1)
       net-ssh (>= 2.6.5)
     net-ssh (2.9.1)
+    paint (0.9.0)
     rake (10.4.2)
 
 PLATFORMS
@@ -43,7 +49,8 @@ DEPENDENCIES
   capistrano-bundler
   capistrano-rails
   capistrano-rvm
-  hashie
+  hashie!
   highline
   json
+  paint
   sshkit!

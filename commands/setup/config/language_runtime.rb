@@ -1,6 +1,6 @@
 task :install_language_runtime => :install_essentials do
   log_notice "Installing language runtime..."
-  case MANIFEST['type']
+  case APP_CONFIG.type
   when 'ruby'
     invoke :install_ruby_runtime
     install_common_ruby_app_dependencies
@@ -14,7 +14,7 @@ task :install_ruby_runtime => :install_essentials do
 end
 
 def _install_ruby_runtime(host)
-  case MANIFEST['ruby_manager']
+  case APP_CONFIG.ruby_manager
   when 'rvm'
     install_rvm(host)
   end
@@ -27,7 +27,7 @@ def install_rvm(host)
     sudo(host, "curl -sSL https://get.rvm.io | bash -s 1.26.5 --ruby")
   end
 
-  ruby_version = MANIFEST['ruby_version']
+  ruby_version = APP_CONFIG.ruby_version
   if ruby_version && !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
     log_info "Installing Ruby interpreter: #{ruby_version}"
     sudo(host, "/usr/local/rvm/bin/rvm install #{ruby_version}")
@@ -66,7 +66,7 @@ def install_rvm(host)
 end
 
 def install_common_ruby_app_dependencies
-  if MANIFEST['install_common_ruby_app_dependencies']
+  if PARAMS.install_common_ruby_app_dependencies
     on roles(:app) do |host|
       case host.properties.fetch(:os_class)
       when :redhat

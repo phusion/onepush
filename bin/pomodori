@@ -3,6 +3,7 @@ require 'optparse'
 
 ROOT = File.absolute_path(File.dirname(__FILE__) + "/..")
 STDOUT.sync = STDERR.sync = true
+ENV['POMODORI_PWD'] = Dir.pwd
 
 if !defined?(Bundler)
   ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"

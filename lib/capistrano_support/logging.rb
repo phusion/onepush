@@ -34,9 +34,9 @@ module Pomodori
       end
 
       def report_progress(step, total)
-        if CONFIG.report_progress?
-          fraction = (step / total.to_f) * (CONFIG.progress_ceil - CONFIG.progress_base)
-          $current_progress = CONFIG.progress_base + fraction
+        if PARAMS.progress
+          fraction = (step / total.to_f) * (PARAMS.progress_ceil - PARAMS.progress_base)
+          $current_progress = PARAMS.progress_base + fraction
           puts "PROGRS -- #{$current_progress}"
         end
       end

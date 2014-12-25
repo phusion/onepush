@@ -1,7 +1,7 @@
 task :install_web_server => [:install_essentials, :install_passenger] do
-  if MANIFEST['install_web_server']
+  if PARAMS.install_web_server
     log_notice "Installing web server..."
-    case MANIFEST['web_server_type']
+    case APP_CONFIG.web_server_type
     when 'nginx'
       install_nginx
       enable_passenger_nginx
@@ -71,7 +71,7 @@ def install_nginx_from_source_with_passenger(host)
 end
 
 def enable_passenger_nginx
-  if MANIFEST['install_passenger']
+  if PARAMS.install_passenger
     on roles(:app) do |host|
       config_file      = autodetect_nginx!(host)[:config_file]
       passenger_info   = autodetect_passenger!(host)
@@ -110,7 +110,7 @@ def enable_passenger_nginx
 end
 
 def install_pomodori_nginx_vhosts
-  if MANIFEST['install_web_server']
+  if PARAMS.install_web_server
     on roles(:app) do |host|
       config_file = autodetect_nginx!(host)[:config_file]
       include_directive = "include /etc/pomodori/apps/*/shared/config/nginx-vhost.conf;"
@@ -161,17 +161,17 @@ def install_nginx_service
         config.puts(io.string)
         config.rewind
 
-        sudo_upload(host, config, "/opt/nginx/conf/nginx.conf")
-      elsif sudo_test(host, "grep '^daemon on;' /opt/nginx/conf/nginx.conf")
-        log_info "Disabling daemon mode in /opt/nginx/conf/nginx.conf."
+        sudo_upload(host, config, config_file)
+      elsif sudo_test(host, "grep '^daemon on;' #{config_file}")
+        log_info "Disabling daemon mode in #{config_file}."
         io = StringIO.new
-        sudo_download(host, "/opt/nginx/conf/nginx.conf", io)
+        sudo_download(host, config_file, io)
 
         config = StringIO.new
         config.puts(io.string.sub(/^daemon on;/, 'daemon off;'))
         config.rewind
 
-        sudo_upload(host, config, "/opt/nginx/conf/nginx.conf")
+        sudo_upload(host, config, config_file)
       end
 
       if !test("[[ -e /etc/service/nginx/run ]]")
@@ -180,7 +180,7 @@ def install_nginx_service
         script.puts "#!/bin/bash"
         script.puts "# Installed by #{POMODORI_APP_NAME}."
         script.puts "set -e"
-        script.puts "exec #{nginx_bin}"
+        script.puts "exec #{nginx_bin} -c #{config_file}"
         script.rewind
 
         sudo(host, "mkdir -p /etc/service/nginx")
@@ -206,7 +206,7 @@ def install_apache
     end
   end
 
-  if MANIFEST['install_passenger']
+  if PARAMS.install_passenger
     install_passenger_apache_module
   end
 end

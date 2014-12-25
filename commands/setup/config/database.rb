@@ -1,6 +1,6 @@
 task :install_dbms => :install_essentials do
   log_notice "Installing database software..."
-  type = MANIFEST['database_type']
+  type = APP_CONFIG.database_type
 
   on roles(:db) do |host|
     case host.properties.fetch(:os_class)

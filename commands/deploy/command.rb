@@ -1,10 +1,10 @@
 require 'optparse'
 require 'json'
-require_relative '../base'
+require_relative '../command_base'
 
 module Pomodori
   module Commands
-    class DeployCommand < Base
+    class DeployCommand < CommandBase
       def run
         parse_options
         validate_options
