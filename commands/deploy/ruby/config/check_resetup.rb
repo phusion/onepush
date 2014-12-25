@@ -11,6 +11,10 @@ def check_server_setup_and_return_result(host, last_chance)
   id = PARAMS.app_id
   set :application, id
 
+  # TODO:
+  # check RVM version
+  # check whether Pomodori version has increased since previous run
+
   # Infer app dir
   begin
     app_dir = capture("readlink /etc/pomodori/apps/#{id}; true").strip

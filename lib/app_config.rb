@@ -49,29 +49,39 @@ module Pomodori
       type
       domain_names
       deployment_ssh_keys
+      postsetup_script
+
       passenger
+      database
       memcached
       redis
+
       ruby_version
       ruby_manager
+      rvm_min_version
+
       database_type
       database_name
       database_user
-      postsetup_script
     ).freeze
 
     property :type, EnumValue(:type, 'ruby', 'nodejs'), default: 'ruby'
     property :domain_names, String, required: true
     property :deployment_ssh_keys, Array[String], default: []
+    property :postsetup_script, Array[String], default: []
+
     property :passenger, BooleanValue, default: true
+    property :database, BooleanValue, default: true
     property :memcached, BooleanValue, default: false
     property :redis, BooleanValue, default: false
+
     property :ruby_version, String, default: '2.1.5'
     property :ruby_manager, EnumValue(:ruby_manager, 'rvm'), default: 'rvm'
+    property :rvm_min_version, String, default: '1.26.5'
+
     property :database_type, EnumValue(:database_type, 'postgresql'), default: 'postgresql'
     property :database_name, String
     property :database_user, String
-    property :postsetup_script, Array[String], default: []
 
 
     ################ Methods ################

@@ -16,15 +16,24 @@ end
 def _install_ruby_runtime(host)
   case APP_CONFIG.ruby_manager
   when 'rvm'
-    install_rvm(host)
+    install_or_upgrade_rvm(host)
   end
   clear_cache(host, :ruby)
 end
 
-def install_rvm(host)
+def install_or_upgrade_rvm(host)
   if !test("[[ -e /usr/local/rvm/bin/rvm ]]")
-    sudo(host, "gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3")
-    sudo(host, "curl -sSL https://get.rvm.io | bash -s 1.26.5 --ruby")
+    instal_rvm(host)
+  else
+    rvm_version = capture("/usr/local/rvm/bin/rvm --version").strip.split(" ")[1]
+    if rvm_version.to_s.empty?
+      install_rvm(host)
+    elsif compare_version(rvm_version, APP_CONFIG.rvm_min_version) < 0
+      log_info "RVM #{rvm_version} is older than required version #{APP_CONFIG.rvm_min_version}. Upgrading it."
+      upgrade_rvm(host)
+    else
+      log_info "RVM #{rvm_version} is recent enough."
+    end
   end
 
   ruby_version = APP_CONFIG.ruby_version
@@ -63,6 +72,16 @@ def install_rvm(host)
   end
   io.rewind
   sudo_upload(host, io, "/etc/profile.d/rvm-sudo.sh", :chmod => 755)
+end
+
+def install_rvm(host)
+  sudo(host, "gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3")
+  sudo(host, "curl -sSL https://get.rvm.io | bash -s #{APP_CONFIG.rvm_min_version} --ruby")
+end
+
+def upgrade_rvm(host)
+  sudo(host, "gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3")
+  sudo(host, "/usr/local/rvm/bin/rvm get #{APP_CONFIG.rvm_min_version}")
 end
 
 def install_common_ruby_app_dependencies

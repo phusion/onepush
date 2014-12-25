@@ -4,6 +4,10 @@ def _check_resetup_necessary(host)
   pomodori_repo_path     = "#{app_dir}/pomodori_repo"
   server_app_config_path = "#{app_dir}/pomodori-app-config.json"
 
+  # TODO:
+  # check RVM version
+  # check whether Pomodori version has increased since previous run
+
   if !sudo_test(host, "[[ -e #{pomodori_repo_path} && -e /etc/pomodori/apps/#{id} && -e #{server_app_config_path} ]]")
     return true
   end

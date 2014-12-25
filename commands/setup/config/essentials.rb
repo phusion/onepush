@@ -131,6 +131,7 @@ task :install_essentials => :autodetect_os do
   end
 
   on roles(:app, :db) do |host|
+    sudo(host, "mkdir -p /etc/pomodori && chmod 755 /etc/pomodori")
     sudo(host, "mkdir -p /var/run/pomodori && chmod 700 /var/run/pomodori")
     if host.properties.fetch(:os_class) == :redhat
       enable_epel(host)

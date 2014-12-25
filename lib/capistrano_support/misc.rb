@@ -11,6 +11,16 @@ module Pomodori
           raise "Bug"
         end
       end
+
+      def compare_version(a, b)
+        parse_version(a) <=> parse_version(b)
+      end
+
+      def parse_version(version)
+        version.split(/\./).map do |component|
+          component.to_i
+        end
+      end
     end
   end
 end
