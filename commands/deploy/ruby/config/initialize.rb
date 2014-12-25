@@ -1,11 +1,7 @@
-require_relative '../../lib/config'
 require 'shellwords'
 require 'tmpdir'
 require 'stringio'
-require 'json'
-
-fatal_and_abort "Please set the APP_ROOT environment variable" if !ENV['APP_ROOT']
-fatal_and_abort "Please set the MANIFEST_JSON environment variable" if !ENV['MANIFEST_JSON']
+require_relative '../../lib/config'
 
 TOTAL_STEPS = 11
 
@@ -15,9 +11,8 @@ set :pty, true
 
 
 namespace :deploy do
-  task :initialize_onepush do
-    Dir.chdir(ENV['APP_ROOT'])
-    initialize_onepush_capistrano
+  task :initialize_pomodori do
+    Pomodori::CapistranoSupport.initialize!
     log_notice "Preparing deployment process..."
   end
 
@@ -33,7 +28,7 @@ end
 
 # We install check_server_setup here so that it runs before the RVM hook.
 Capistrano::DSL.stages.each do |stage|
-  after stage, 'deploy:initialize_onepush'
+  after stage, 'deploy:initialize_pomodori'
   after stage, 'deploy:check_server_setup'
 end
 

@@ -17,8 +17,8 @@ PARAMS      = POMODORI_PARAMS_CLASS.new(JSON.parse(PARAMS_TEXT))
 APP_CONFIG  = PARAMS.fetch(:app_config, nil)
 POMODORI_APP_NAME = PARAMS.fetch(:pomodori_app_name, "Pomodori")
 
-if PARAMS.respond_to?(:set_defaults_and_validate!)
-  PARAMS.set_defaults_and_validate!
+if PARAMS.respond_to?(:validate_and_finalize!)
+  PARAMS.validate_and_finalize!
 end
 
 include Pomodori::CapistranoSupport::Logging

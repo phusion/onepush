@@ -1,5 +1,6 @@
 set :linked_files, %w{config/database.yml config/secrets.yml}
 set :linked_dirs, %w{log tmp vendor/bundle public/system public/assets}
+set :migration_role, :app
 set :bundle_roles, :app
 set :bundle_flags, "--deployment"
 
@@ -35,11 +36,11 @@ namespace :deploy do
   end
 
   after :publishing, :create_ruby_version_file do
-    if MANIFEST['ruby_version']
+    if APP_CONIFG.ruby_version
       log_info "Creating .ruby-version file..."
       on roles(:app) do
         io = StringIO.new
-        io.puts MANIFEST['ruby_version']
+        io.puts APP_CONFIG.ruby_version
         io.rewind
         upload! io, release_path.join('.ruby-version')
       end

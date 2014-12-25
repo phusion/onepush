@@ -1,14 +1,20 @@
 require_relative '../../lib/app_config'
 require_relative '../../lib/infrastructure_config'
+require_relative '../../lib/database_config'
 
 module Pomodori
   module Commands
     class SetupParams < Pomodori::InfrastructureConfig
+      RESETUP_PROPERTIES = %w(
+        external_database
+      ).freeze
+
       property :app_config, Pomodori::AppConfig
 
       property :server_address, String
       property :app_server_addresses, Array[String], default: []
       property :db_server_address, String
+      property :external_database, DatabaseConfig
 
       property :if_needed, BooleanValue, default: false
       property :ssh_log, String
@@ -23,10 +29,15 @@ module Pomodori
       property :install_web_server, BooleanValue, default: true
       property :install_common_ruby_app_dependencies, BooleanValue, default: true
 
-      def set_defaults_and_validate!
+      def install_database?
+        external_database.nil?
+      end
+
+      def validate_and_finalize!
         if app_config.nil?
           abort "The parameter 'app_config' is required."
         end
+
         if server_address
           if app_server_addresses.any? || db_server_address
             abort "When the 'server_address' parameter is set, " +
@@ -37,11 +48,20 @@ module Pomodori
           self.server_address = nil
         else
           if app_server_addresses.empty?
-            abort "The parameter 'app_server_address' is required."
+            abort "The parameter 'app_server_addresses' is required."
           end
-          if db_server_address.nil?
+          if db_server_address.nil? && external_database.nil?
             abort "The parameter 'db_server_address' is required."
           end
+        end
+
+        if external_database && db_server_address
+          abort "When the 'external_database' parameter is set, " +
+            "'server_address' and 'db_server_address' may not be set."
+        end
+
+        if external_database
+          external_database.validate_and_finalize!(app_config)
         end
       end
     end

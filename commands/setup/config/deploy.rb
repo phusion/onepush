@@ -8,7 +8,7 @@ require 'net/https'
 require_relative '../../../lib/app_config'
 require_relative '../../../lib/version'
 
-TOTAL_STEPS = 15
+TOTAL_STEPS = 16
 
 # If Capistrano is terminated, having a PTY will allow
 # all commands on the server to properly terminate.
@@ -105,33 +105,30 @@ task :setup do
 
   invoke :create_app_user
   invoke :create_app_dir
+  invoke :create_app_secrets
   report_progress(8, TOTAL_STEPS)
 
   invoke :install_dbms
   report_progress(9, TOTAL_STEPS)
 
-  setup_database(APP_CONFIG.database_type,
-    APP_CONFIG.database_name,
-    APP_CONFIG.database_user)
-  create_app_database_config(
-    APP_CONFIG.app_dir,
-    APP_CONFIG.user,
-    APP_CONFIG.database_type,
-    APP_CONFIG.database_name,
-    APP_CONFIG.database_user)
+  invoke :install_database_client_software
   report_progress(10, TOTAL_STEPS)
 
-  invoke :install_additional_services
+  invoke :setup_database
+  invoke :create_app_database_config
   report_progress(11, TOTAL_STEPS)
 
-  invoke :create_app_vhost
+  invoke :install_additional_services
   report_progress(12, TOTAL_STEPS)
 
-  invoke :run_postsetup
+  invoke :create_app_vhost
   report_progress(13, TOTAL_STEPS)
 
-  invoke :update_pomodori_app_config_on_server
+  invoke :run_postsetup
   report_progress(14, TOTAL_STEPS)
+
+  invoke :update_pomodori_app_config_on_server
+  report_progress(15, TOTAL_STEPS)
   invoke :restart_services
   report_progress(TOTAL_STEPS, TOTAL_STEPS)
 

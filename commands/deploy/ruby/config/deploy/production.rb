@@ -1,23 +1,26 @@
 require 'json'
 require 'uri'
 
-CONFIG.deploy_addresses.each do |address|
+PARAMS.app_server_addresses.each_with_index do |address, i|
   if address == "localhost"
-    server(:local, :roles => ["web", "app", "db"])
+    server(:local, :roles => ["app"])
   else
     uri = URI.parse("scheme://#{address}")
     hostname = uri.hostname.dup
     hostname << ":#{uri.port}" if uri.port
-    server(hostname, :user => uri.user || "root", :roles => ["web", "app", "db"])
+    server(hostname,
+      :user => uri.user || "root",
+      :roles => ["web", "app"],
+      :primary => i == 0)
   end
 end
 
 keys = []
-if CONFIG.vagrant_key
-  keys << File.absolute_path(File.dirname(__FILE__) + "/../../../../../lib/vagrant_insecure_key")
+if PARAMS.vagrant_key
+  keys << File.absolute_path(File.dirname(__FILE__) + "/../../../../lib/vagrant_insecure_key")
 end
-if CONFIG.ssh_keys
-  JSON.parse(CONFIG.ssh_keys).each do |filename|
+if PARAMS.ssh_keys.any?
+  JSON.parse(PARAMS.ssh_keys).each do |filename|
     keys << filename
   end
 end

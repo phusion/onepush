@@ -1,36 +1,45 @@
-task :install_dbms => :install_essentials do
-  log_notice "Installing database software..."
-  type = APP_CONFIG.database_type
+require 'yaml'
 
-  on roles(:db) do |host|
-    case host.properties.fetch(:os_class)
-    when :redhat
-      case type
-      when 'postgresql'
-        yum_install(host, %w(postgresql postgresql-server))
-        files = sudo_capture(host, "ls -1 /var/lib/pgsql/data")
-        if files.empty?
-          sudo(host, "service postgresql initdb")
+task :install_dbms => :install_essentials do
+  if PARAMS.install_database?
+    log_notice "Installing database server software..."
+    type = APP_CONFIG.database_type
+
+    on roles(:db) do |host|
+      case host.properties.fetch(:os_class)
+      when :redhat
+        case type
+        when 'postgresql'
+          yum_install(host, %w(postgresql postgresql-server))
+          files = sudo_capture(host, "ls -1 /var/lib/pgsql/data")
+          if files.empty?
+            sudo(host, "service postgresql initdb")
+          end
+          if !sudo_test(host, "service postgresql status")
+            sudo(host, "service postgresql start")
+            # Wait for PostgreSQL to start.
+            sleep 1
+          end
+        else
+          abort "Unsupported database type. Only PostgreSQL is supported."
         end
-        if !sudo_test(host, "service postgresql status")
-          sudo(host, "service postgresql start")
-          # Wait for PostgreSQL to start.
-          sleep 1
+      when :debian
+        case type
+        when 'postgresql'
+          apt_get_install(host, %w(postgresql postgresql-client))
+        else
+          abort "Unsupported database type. Only PostgreSQL is supported."
         end
       else
-        abort "Unsupported database type. Only PostgreSQL is supported."
+        raise "Bug"
       end
-    when :debian
-      case type
-      when 'postgresql'
-        apt_get_install(host, %w(postgresql postgresql-client))
-      else
-        abort "Unsupported database type. Only PostgreSQL is supported."
-      end
-    else
-      raise "Bug"
     end
   end
+end
+
+task :install_database_client_software => :install_essentials do
+  log_notice "Installing database client software..."
+  type = APP_CONFIG.database_type
 
   on roles(:app) do |host|
     case host.properties.fetch(:os_class)
@@ -54,70 +63,80 @@ task :install_dbms => :install_essentials do
   end
 end
 
-def setup_database(type, name, user)
+task :setup_database => [:install_essentials, :install_database_client_software] do
   log_notice "Setting up database for app..."
-  on roles(:db) do |host|
-    case type
-    when 'postgresql'
-      user_test_script = "cd / && sudo -u postgres -H psql postgres -tAc " +
-        "\"SELECT 1 FROM pg_roles WHERE rolname='#{user}'\" | grep -q 1"
-      if !sudo_test(host, user_test_script)
-        sudo(host, "cd / && sudo -u postgres -H createuser --no-password -SDR #{user}")
-      end
+  type = APP_CONFIG.database_type
+  name = APP_CONFIG.database_name
+  user = APP_CONFIG.database_user
 
-      databases = sudo_capture(host, "cd / && sudo -u postgres -H psql postgres -lqt | cut -d \\| -f 1")
-      if databases !~ /^ *#{Regexp.escape name} *\r?$/
-        sudo(host, "cd / && sudo -u postgres -H createdb --no-password --owner #{user} #{name}")
+  if PARAMS.install_database?
+    on roles(:db) do |host|
+      case type
+      when 'postgresql'
+        user_test_script = "cd / && sudo -u postgres -H psql postgres -tAc " +
+          "\"SELECT 1 FROM pg_roles WHERE rolname='#{user}'\" | grep -q 1"
+        if !sudo_test(host, user_test_script)
+          sudo(host, "cd / && sudo -u postgres -H createuser --no-password -SDR #{user}")
+        end
+
+        databases = sudo_capture(host, "cd / && sudo -u postgres -H psql postgres -lqt | cut -d \\| -f 1")
+        if databases !~ /^ *#{Regexp.escape name} *\r?$/
+          sudo(host, "cd / && sudo -u postgres -H createdb --no-password --owner #{user} #{name}")
+        end
+      else
+        abort "Unsupported database type. Only PostgreSQL is supported."
       end
-    else
-      abort "Unsupported database type. Only PostgreSQL is supported."
     end
   end
 end
 
-def create_app_database_config(app_dir, owner, db_type, db_name, db_user)
+task :create_app_database_config => :create_app_dir do
+  log_notice "Installing database configuration files for app..."
+  app_dir = APP_CONFIG.app_dir
+
   on roles(:app) do
-    if !test("[[ -e #{app_dir}/shared/config/database.yml ]]")
-      config = StringIO.new
-      config.puts "# Installed by #{POMODORI_APP_NAME}."
-      config.puts "default_settings: &default_settings"
-      case db_type
-      when 'postgresql'
-        config.puts "  adapter: postgresql"
-      else
-        abort "Unsupported database type . Only PostgreSQL is supported."
-      end
-      config.puts "  database: #{db_name}"
-      config.puts "  username: #{db_user}"
-      config.puts "  encoding: utf-8"
-      config.puts "  pool: 5"
-      config.puts
-      ["development", "staging", "production"].each do |env|
-        config.puts "#{env}:"
-        config.puts "  <<: *default_settings"
-        config.puts
-      end
-      config.rewind
-      sudo_upload(host, config, "#{app_dir}/shared/config/database.yml")
+    config = {}
+
+    case APP_CONFIG.database_type
+    when 'postgresql'
+      config["adapter"] = "postgresql"
+    else
+      abort "Unsupported database type . Only PostgreSQL is supported."
     end
 
-    if !test("[[ -e #{app_dir}/shared/config/secrets.yml ]]")
-      config = StringIO.new
-      config.puts "# Installed by #{POMODORI_APP_NAME}."
-      config.puts "default_settings: &default_settings"
-      config.puts "  secret_key_base: #{SecureRandom.hex(64)}"
-      config.puts
-      ["development", "staging", "production"].each do |env|
-        config.puts "#{env}:"
-        config.puts "  <<: *default_settings"
-        config.puts
-      end
-      config.rewind
-      sudo_upload(host, config, "#{app_dir}/shared/config/secrets.yml")
+    if PARAMS.external_database
+      config.merge!(PARAMS.external_database)
+    else
+      config = {
+        "database" => APP_CONFIG.database_name,
+        "user"     => APP_CONFIG.database_user
+      }
     end
+    config["pool"] = 5
+    config["encoding"] = "utf-8"
 
-    sudo(host, "cd #{app_dir}/shared/config && " +
-      "chmod 600 database.yml secrets.yml && " +
-      "chown #{owner}: database.yml secrets.yml")
+    # Generate database.yml.
+    io = StringIO.new
+    io.puts "# Automatically generated by #{POMODORI_APP_NAME}."
+    io.puts "default_settings: &default_settings"
+    io.puts YAML.dump("TOP" => config).sub(/.*?TOP:\n/m, "")
+    io.puts
+    ["development", "staging", "production"].each do |env|
+      io.puts "#{env}:"
+      io.puts "  <<: *default_settings"
+      io.puts
+    end
+    io.rewind
+    sudo_upload(host, io, "#{app_dir}/shared/config/database.yml",
+      :chmod => 600,
+      :chown => APP_CONFIG.user)
+
+    # Generate database.json.
+    io = StringIO.new
+    io.puts JSON.pretty_generate(config)
+    io.rewind
+    sudo_upload(host, io, "#{app_dir}/shared/config/database.json",
+      :chmod => 600,
+      :chown => APP_CONFIG.user)
   end
 end

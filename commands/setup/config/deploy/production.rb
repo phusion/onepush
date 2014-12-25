@@ -15,13 +15,15 @@ PARAMS.app_server_addresses.each_with_index do |address, i|
   end
 end
 
-if PARAMS.db_server_address == "localhost"
-  server(:local, :roles => ["db"])
-else
-  uri = URI.parse("scheme://#{PARAMS.db_server_address}")
-  hostname = uri.hostname.dup
-  hostname << ":#{uri.port}" if uri.port
-  server(hostname, :user => uri.user || "root", :roles => ["db"])
+if PARAMS.db_server_address
+  if PARAMS.db_server_address == "localhost"
+    server(:local, :roles => ["db"])
+  else
+    uri = URI.parse("scheme://#{PARAMS.db_server_address}")
+    hostname = uri.hostname.dup
+    hostname << ":#{uri.port}" if uri.port
+    server(hostname, :user => uri.user || "root", :roles => ["db"])
+  end
 end
 
 keys = []

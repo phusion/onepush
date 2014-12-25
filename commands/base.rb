@@ -35,6 +35,41 @@ module Pomodori
           Paint.mode = 0
         end
       end
+
+      def success_greeting
+        ["High five", "Awesome", "Hurray", "Congratulations", "Wow"].sample
+      end
+
+      def prepare_announcement
+        @announcement_thread = Thread.new do
+          http = Net::HTTP.new("phusion.github.io", 80)
+          begin
+            response = http.request(Net::HTTP::Get.new("/pomodori/announcements.json"))
+          rescue Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, EOFError,
+            Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError => e
+            # Ignore error
+            return
+          end
+
+          if response.code.to_i / 100 == 2
+            Thread.current[:result] = response.body
+          end
+        end
+      end
+
+      def print_announcement
+        @announcement_thread.join
+        if result = @announcement_thread[:result]
+          begin
+            result = JSON.parse(result)
+          rescue JSON::ParserError
+            # Ignore error
+          else
+            puts
+            puts Paint[result.first[:message], :bold]
+          end
+        end
+      end
     end
   end
 end

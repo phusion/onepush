@@ -1,5 +1,7 @@
 require 'optparse'
 require 'json'
+require 'thread'
+require 'net/http'
 require 'paint'
 require_relative '../base'
 require_relative './params'
@@ -11,6 +13,7 @@ module Pomodori
         parse_options
         validate_and_finalize_options
         setup_paint_mode
+        prepare_announcement
         if run_capistrano
           report_success
           print_announcement
@@ -67,13 +70,11 @@ module Pomodori
           opts.on("--app-server-address ADDRESS", String,
             "The address of an app server to setup. This#{nl}" +
             "can be specified multiple times for setting#{nl}" +
-            "up multiple servers. The first app server#{nl}" +
-            "in the list is considered the primary;#{nl}" +
-            "database migrations will run there") do |address|
+            "up multiple servers") do |address|
             options[:app_server_addresses] << address
           end
           opts.on("--db-server-address ADDRESS", String,
-            "The address of the database server") do |address|
+            "The address of the database server to setup") do |address|
             options[:db_server_address] = address
           end
           opts.on("--if-needed", "Use heuristics to determine whether the#{nl}" +
@@ -103,7 +104,7 @@ module Pomodori
           end
           opts.separator ""
           opts.on("--trace", "-t", "Show detailed backtraces and trace tasks") do
-            options[:detailed_backtraces] = true
+            options[:trace] = true
           end
           opts.on("--help", "Show this help") do
             options[:help] = true
@@ -154,18 +155,6 @@ module Pomodori
         puts
         puts "-------------------------------------"
         puts Paint["#{success_greeting}, setup succeeded! :-D", :green]
-      end
-
-      def success_greeting
-        ["High five", "Awesome", "Hurray", "Congratulations", "Wow"].sample
-      end
-
-      def prepare_announcement
-        # TODO
-      end
-
-      def print_announcement
-        # TODO
       end
 
       def report_failure

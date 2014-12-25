@@ -43,7 +43,7 @@ task :create_app_dir => [:install_essentials, :create_app_user] do
   end
 end
 
-task :create_app_vhost => [:create_app_dir] do
+task :create_app_vhost => :create_app_dir do
   log_notice "Creating web server virtual host for app..."
   app_dir = APP_CONFIG.app_dir
   user    = APP_CONFIG.user
@@ -102,6 +102,29 @@ task :create_app_vhost => [:create_app_dir] do
       sudo_upload(host, local, local_conf,
         :chown => "#{user}:",
         :chmod => "640")
+    end
+  end
+end
+
+task :create_app_secrets => :create_app_dir do
+  app_dir = APP_CONFIG.app_dir
+
+  on roles(:app) do |host|
+    if !sudo_test(host, "[[ -e #{app_dir}/shared/config/secrets.yml ]]")
+      config = StringIO.new
+      config.puts "# Installed by #{POMODORI_APP_NAME}."
+      config.puts "default_settings: &default_settings"
+      config.puts "  secret_key_base: #{SecureRandom.hex(64)}"
+      config.puts
+      ["development", "staging", "production"].each do |env|
+        config.puts "#{env}:"
+        config.puts "  <<: *default_settings"
+        config.puts
+      end
+      config.rewind
+      sudo_upload(host, config, "#{app_dir}/shared/config/secrets.yml",
+        :chmod => 600,
+        :chown => APP_CONFIG.user)
     end
   end
 end
