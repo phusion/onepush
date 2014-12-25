@@ -1,11 +1,10 @@
 source 'https://rubygems.org'
 
-gem 'capistrano'
-gem 'capistrano-rvm'
-gem 'capistrano-bundler'
-gem 'capistrano-rails'
+gemspec
+
 gem 'sshkit', :github => 'phusion/sshkit'
-gem 'json'
-gem 'highline'
-gem 'paint'
 gem 'hashie', :github => 'intridea/hashie'
+
+group :development do
+  gem 'rake'
+end
