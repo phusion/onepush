@@ -66,11 +66,13 @@ task :create_app_vhost => [:create_app_dir] do
   config.puts "    listen 80;"
   config.puts "    server_name #{APP_CONFIG.domain_names};"
   config.puts "    root #{app_dir}/current/public;"
-  config.puts "    passenger_enabled on;"
-  if APP_CONFIG.type == 'ruby' && APP_CONFIG.ruby_manager == 'rvm'
-    config.puts "    passenger_ruby #{shared_dir}/ruby;"
+  if APP_CONFIG.passenger
+    config.puts "    passenger_enabled on;"
+    if APP_CONFIG.type == 'ruby' && APP_CONFIG.ruby_manager == 'rvm'
+      config.puts "    passenger_ruby #{shared_dir}/ruby;"
+    end
+    config.puts "    passenger_user #{user};"
   end
-  config.puts "    passenger_user #{user};"
   config.puts "    include #{local_conf};"
   config.puts "}"
   config.rewind

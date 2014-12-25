@@ -49,6 +49,7 @@ module Pomodori
       type
       domain_names
       deployment_ssh_keys
+      passenger
       memcached
       redis
       ruby_version
@@ -62,6 +63,7 @@ module Pomodori
     property :type, EnumValue(:type, 'ruby', 'nodejs'), default: 'ruby'
     property :domain_names, String, required: true
     property :deployment_ssh_keys, Array[String], default: []
+    property :passenger, BooleanValue, default: true
     property :memcached, BooleanValue, default: false
     property :redis, BooleanValue, default: false
     property :ruby_version, String, default: '2.1.5'
