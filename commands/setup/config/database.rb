@@ -38,7 +38,7 @@ task :install_dbms => :install_essentials do
 end
 
 task :install_database_client_software => :install_essentials do
-  if APP_CONFIG.database?
+  if APP_CONFIG.database
     log_notice "Installing database client software..."
     type = APP_CONFIG.database_type
 

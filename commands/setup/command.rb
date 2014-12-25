@@ -37,14 +37,6 @@ module Pomodori
           opts.separator ""
 
           opts.separator "Mandatory options:"
-          opts.on("--app-config FILENAME", String,
-            "The app config file") do |filename|
-            options[:app_config] = JSON.parse(File.read(filename))
-          end
-          opts.on("--app-config-json JSON", String,
-            "The app config as a JSON string") do |json|
-            options[:app_config] = JSON.parse(json)
-          end
           opts.on("--params FILENAME", String,
             "The config file containing command#{nl}" +
             "parameters") do |filename|
@@ -53,6 +45,14 @@ module Pomodori
           opts.on("--params-json JSON", String,
             "The command parameters as a JSON string") do |json|
             options.replace(JSON.parse(json))
+          end
+          opts.on("--app-config FILENAME", String,
+            "The app config file") do |filename|
+            options[:app_config] = JSON.parse(File.read(filename))
+          end
+          opts.on("--app-config-json JSON", String,
+            "The app config as a JSON string") do |json|
+            options[:app_config] = JSON.parse(json)
           end
 
           opts.separator ""
@@ -113,12 +113,8 @@ module Pomodori
       end
 
       def validate_and_finalize_options
-        if @options[:app_config].nil?
-          abort(" *** ERROR: Please specify an app config file.")
-        end
-
         begin
-          app_config = AppConfig.new(@options.delete(:app_config))
+          app_config = AppConfig.new(@options.delete(:app_config) || @options)
         rescue ArgumentError => e
           abort(" *** ERROR: " + AppConfig.fixup_error_message(e.message))
         end
