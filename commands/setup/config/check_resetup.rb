@@ -4,10 +4,6 @@ def _check_resetup_necessary(host)
   pomodori_repo_path   = "#{app_dir}/pomodori_repo"
   server_manifest_path = "#{app_dir}/pomodori-manifest.json"
 
-  # TODO:
-  # check RVM version
-  # check whether Pomodori version has increased since previous run
-
   if !sudo_test(host, "[[ -e #{pomodori_repo_path} && -e /etc/pomodori/apps/#{id} && -e #{server_manifest_path} ]]")
     return true
   end
@@ -45,7 +41,7 @@ def _check_resetup_necessary(host)
   false
 end
 
-task :check_resetup_necessary => :install_essentials do
+task :check_resetup_necessary => [:install_essentials, :check_setup_version_compatibility] do
   if PARAMS.if_needed
     mutex  = Mutex.new
     states = []

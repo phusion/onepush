@@ -126,6 +126,9 @@ module Pomodori
           abort(" *** ERROR: " + fixup_params_error_message(e.message))
         end
 
+        params.validate_and_finalize!
+        app_config.set_defaults!(params)
+
         ENV["POMODORI_PARAMS"] = JSON.generate(params)
       end
 

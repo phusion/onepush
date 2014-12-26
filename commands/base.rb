@@ -37,7 +37,7 @@ module Pomodori
       end
 
       def success_greeting
-        ["High five", "Awesome", "Hurray", "Congratulations", "Wow"].sample
+        ["High five", "Awesome", "Hurray", "Congratulations", "Wow", "Splendid"].sample
       end
 
       def prepare_announcement

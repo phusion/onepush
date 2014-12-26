@@ -60,24 +60,18 @@ module Pomodori
           opts.on("--app-id NAME", String, "The application ID") do |value|
             options[:app_id] = value
           end
-          opts.on("--server-address ADDRESS", String,
-            "The address of the server to deploy to.#{nl}" +
-            "This parameter sets a single server and#{nl}" +
-            "designates it as both an app server and#{nl}" +
-            "a database server") do |value|
-            options[:server_address] = value
+          opts.on("--app-root PATH", String,
+            "Path to the application. Default: current#{nl}" +
+            "working directory") do |value|
+            options[:app_root] = value
           end
           opts.on("--app-server-address ADDRESS", String,
-            "The address of an app server to deploy to. This#{nl}" +
-            "can be specified multiple times for setting#{nl}" +
-            "up multiple servers. The first app server#{nl}" +
-            "in the list is considered the primary;#{nl}" +
-            "database migrations will run there") do |address|
+            "The address of an app server to deploy to.#{nl}" +
+            "This can be specified multiple times for#{nl}" +
+            "setting up multiple servers. The first app#{nl}" +
+            "server in the list is considered the#{nl}" +
+            "primary; database migrations will run there") do |address|
             options[:app_server_addresses] << address
-          end
-          opts.on("--db-server-address ADDRESS", String,
-            "The address of the database server") do |address|
-            options[:db_server_address] = address
           end
           opts.on("--ssh-log FILENAME", String, "Log SSH output to the given file") do |filename|
             options[:ssh_log] = filename
@@ -110,6 +104,12 @@ module Pomodori
       end
 
       def validate_and_finalize_options
+        if @options[:app_root]
+          @options[:app_root] = File.absolute_path(@options[:app_root])
+        else
+          @options[:app_root] = Dir.pwd
+        end
+
         begin
           app_config = AppConfig.new(@options.delete(:app_config) || @options)
         rescue ArgumentError => e
@@ -117,15 +117,35 @@ module Pomodori
         end
 
         begin
-          params = SetupParams.new(@options)
+          params = DeployRubyParams.new(@options)
           params.app_config = app_config
         rescue ArgumentError => e
           abort(" *** ERROR: " + fixup_params_error_message(e.message))
         end
 
+        autodetect_language_specific_params(params)
         params.if_needed = true
+        params.validate_and_finalize!
+        app_config.set_defaults!(params)
 
         ENV["POMODORI_PARAMS"] = JSON.generate(params)
+      end
+
+      def autodetect_language_specific_params(params)
+        app_root = params.app_root
+
+        case params.app_config.language
+        when 'ruby'
+          gemfile = "#{app_root}/Gemfile"
+          if !params.key?(:bundler)
+            params.bundler = File.exist?(gemfile)
+          end
+          if !params.key?(:rails)
+            params.rails =
+              (File.exist?(gemfile) || File.read(gemfile) =~ /rails/) &&
+              File.exist?("#{app_root}/config/environment.rb")
+          end
+        end
       end
 
       def fixup_params_error_message(message)

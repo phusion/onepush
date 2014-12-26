@@ -199,3 +199,10 @@ def enable_phusion_runit_yum_repo(host)
     sudo(host, "curl --fail -L -o /etc/yum.repos.d/phusion-runit.repo https://oss-binaries.phusionpassenger.com/yumgems/phusion-runit/#{name}.repo")
   end
 end
+
+task :check_setup_version_compatibility => :install_essentials do
+  log_notice "Checking for compatibility..."
+  on roles(:app, :db) do |host|
+    _check_setup_version_compatibility(host)
+  end
+end

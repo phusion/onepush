@@ -39,6 +39,8 @@ module Pomodori
       when "deploy"
         require_relative '../commands/deploy/command'
         Pomodori::Commands::DeployCommand.new(@argv).run
+      when "migrate"
+        abort "Not yet implemented."
       when "help", "-h", "--help"
         help
       else

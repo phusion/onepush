@@ -13,7 +13,8 @@ def check_server_setup_and_return_result(host, last_chance)
 
   # TODO:
   # check RVM version
-  # check whether Pomodori version has increased since previous run
+
+  _check_setup_version_compatibility(host)
 
   # Infer app dir
   begin

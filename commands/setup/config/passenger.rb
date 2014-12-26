@@ -92,8 +92,7 @@ def install_passenger_from_source(host)
       execute("curl --fail --silent -L -o #{tmpdir}/passenger.tar.gz #{passenger_tarball_url}")
       dirname = capture("tar tzf #{tmpdir}/passenger.tar.gz | head -n 1").strip.sub(/\/$/, '')
       if dirname.empty?
-        log_error "There is something wrong with the downloaded archive."
-        abort
+        fatal_and_abort "There is something wrong with the downloaded Passenger archive."
       end
 
       # Extract tarball.

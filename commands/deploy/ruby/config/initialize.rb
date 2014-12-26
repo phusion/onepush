@@ -43,7 +43,7 @@ end
 #   https://github.com/capistrano/bundler
 #   https://github.com/capistrano/rails
 
-case MANIFEST['ruby_manager']
+case APP_CONFIG.ruby_manager
 when 'rvm'
   require 'capistrano/rvm'
 when 'rbenv'
@@ -52,6 +52,11 @@ when 'chruby'
   require 'capistrano/chruby'
 end
 
-require 'capistrano/bundler'
-require 'capistrano/rails/assets'
-require 'capistrano/rails/migrations'
+
+if PARAMS.bundler
+  require 'capistrano/bundler'
+end
+if PARAMS.rails
+  require 'capistrano/rails/assets'
+  require 'capistrano/rails/migrations'
+end

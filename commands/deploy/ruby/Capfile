@@ -1,4 +1,4 @@
-require_relative './command'
+require_relative '../command'
 POMODORI_PARAMS_CLASS = Pomodori::Commands::DeployParams
 
 require 'capistrano/setup'

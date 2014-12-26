@@ -6,9 +6,16 @@ module Pomodori
   # version, then the user must run `pomodori migrate`.
   SETUP_VERSION  = "1.0"
 
-  def self.semver_compatible?(our_version, their_version)
-    our_major, our_minor = our_version.split(".")
-    their_minor, their_minor = their_version.split(".")
+  def self.setup_version_compatible?(their_version)
+    our_major, our_minor = SETUP_VERSION.split(".")
+    their_major, their_minor = their_version.split(".")
     our_major == their_major && our_minor >= their_minor
+  end
+
+  def self.setup_version_migratable?(their_version)
+    our_major, our_minor = SETUP_VERSION.split(".")
+    their_major, their_minor = their_version.split(".")
+    (our_major == their_major && our_minor >= their_minor) ||
+      (our_major > their_major)
   end
 end

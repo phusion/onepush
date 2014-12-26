@@ -1,3 +1,5 @@
+require 'stringio'
+
 module Pomodori
   module CapistranoSupport
     module FileManipulation
@@ -34,11 +36,19 @@ module Pomodori
         end
       end
 
-      def download_to_string(path)
+      def download_to_string(path, options = {})
         io = StringIO.new
         io.binmode
-        download!(path, io)
+        download!(path, io, options)
         io.string
+      end
+
+      def try_download_to_string(path)
+        if test_cond("-e #{path}")
+          download_to_string(path)
+        else
+          nil
+        end
       end
 
       def mktempdir(host)

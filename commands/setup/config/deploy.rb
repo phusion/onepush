@@ -54,7 +54,8 @@ task :update_pomodori_server_manifest => :install_essentials do
       "cd /etc/pomodori/setup && " +
       "date +%s > last_run_time && " +
       "echo #{Pomodori::VERSION_STRING} > last_run_version && " +
-      "echo #{Pomodori::SETUP_VERSION} > last_run_setup_version")
+      "echo #{Pomodori::SETUP_VERSION} > last_run_setup_version && " +
+      "echo '#{POMODORI_APP_NAME} #{Pomodori::VERSION_STRING}' > last_run_version_name")
   end
 end
 
@@ -92,6 +93,7 @@ task :setup do
   invoke :install_essentials
   report_progress(3, TOTAL_STEPS)
 
+  invoke :check_setup_version_compatibility
   invoke :check_resetup_necessary
   report_progress(4, TOTAL_STEPS)
 
