@@ -33,6 +33,10 @@ module Pomodori
         setup_bundler
         require_relative '../commands/setup/command'
         Pomodori::Commands::SetupCommand.new(@argv).run
+      when "push"
+        setup_bundler
+        require_relative '../commands/push/command'
+        Pomodori::Commands::PushCommand.new(@argv).run
       when "deploy"
         setup_bundler
         require_relative '../commands/deploy/command'
@@ -48,7 +52,7 @@ module Pomodori
     end
 
     def help
-      puts "Usage: pomodori <init|setup|deploy> [options...]"
+      puts "Usage: pomodori <init|setup|push|deploy> [options...]"
       puts
       puts "Type pomodori <COMMAND> --help for more information."
     end

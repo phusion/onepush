@@ -33,7 +33,7 @@ module Pomodori
       def self.create_option_parser(options)
         OptionParser.new do |opts|
           nl = "\n" + (" " * 37)
-          opts.banner = "Usage: pomodori setup [options]"
+          opts.banner = "Usage: pomodori setup [OPTIONS]"
           opts.separator ""
 
           opts.separator "Mandatory options:"

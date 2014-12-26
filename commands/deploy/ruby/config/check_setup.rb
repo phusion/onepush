@@ -1,3 +1,5 @@
+require_relative '../../../setup/params'
+
 def _check_server_setup(host)
   log_notice "Checking server setup..."
   report_progress(1, TOTAL_STEPS)
@@ -57,7 +59,7 @@ def check_server_setup_and_return_result(host, last_chance)
       return false
     end
   end
-  Pomodori::SetupParams::RESETUP_PROPERTIES.each do |name|
+  Pomodori::Commands::SetupParams::RESETUP_PROPERTIES.each do |name|
     if PARAMS[name] != server_manifest[name]
       return false
     end

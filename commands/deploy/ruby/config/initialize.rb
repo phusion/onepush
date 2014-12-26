@@ -1,7 +1,6 @@
 require 'shellwords'
 require 'tmpdir'
 require 'stringio'
-require_relative '../../lib/config'
 
 TOTAL_STEPS = 11
 
@@ -31,6 +30,9 @@ Capistrano::DSL.stages.each do |stage|
   after stage, 'deploy:initialize_pomodori'
   after stage, 'deploy:check_server_setup'
 end
+
+# Disable Capistrano 3.3 metrics collection.
+Rake::Task["metrics:collect"].clear_actions
 
 
 # Includes tasks from other gems included in your Gemfile

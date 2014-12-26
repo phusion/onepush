@@ -33,7 +33,7 @@ module Pomodori
       def self.create_option_parser(options)
         OptionParser.new do |opts|
           nl = "\n" + (" " * 37)
-          opts.banner = "Usage: pomodori deploy [options]"
+          opts.banner = "Usage: pomodori deploy [OPTIONS]"
           opts.separator ""
 
           opts.separator "Mandatory options:"
@@ -117,7 +117,7 @@ module Pomodori
         end
 
         begin
-          params = DeployRubyParams.new(@options)
+          params = DeployParams.new(@options)
           params.app_config = app_config
         rescue ArgumentError => e
           abort(" *** ERROR: " + fixup_params_error_message(e.message))

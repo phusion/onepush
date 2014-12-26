@@ -4,30 +4,31 @@ require_relative '../../lib/database_config'
 
 module Pomodori
   module Commands
-    class SetupParams < Pomodori::InfrastructureConfig
-      RESETUP_PROPERTIES = %w(
-        external_database
-      ).freeze
+    # Works around https://github.com/intridea/hashie/issues/255
+    module SetupParamsLike
+      BooleanValue = Utils::BooleanValue
 
-      property :app_config, Pomodori::AppConfig
+      def self.install_properties!(klass)
+        klass.property :app_config, Pomodori::AppConfig
 
-      property :server_address, String
-      property :app_server_addresses, Array[String], default: []
-      property :db_server_address, String
-      property :external_database, DatabaseConfig
+        klass.property :server_address, String
+        klass.property :app_server_addresses, Array[String], default: []
+        klass.property :db_server_address, String
+        klass.property :external_database, DatabaseConfig
 
-      property :if_needed, BooleanValue, default: false
-      property :ssh_log, String
-      property :ssh_keys, Array[String], default: []
-      property :vagrant_key, String
-      property :progress, BooleanValue, default: false
-      property :progress_base, Float, default: 0
-      property :progress_ceil, Float, default: 1
+        klass.property :if_needed, BooleanValue, default: false
+        klass.property :ssh_log, String
+        klass.property :ssh_keys, Array[String], default: []
+        klass.property :vagrant_key, String
+        klass.property :progress, BooleanValue, default: false
+        klass.property :progress_base, Float, default: 0
+        klass.property :progress_ceil, Float, default: 1
 
-      property :install_passenger, BooleanValue, default: true
-      property :force_install_passenger_from_source, BooleanValue, default: false
-      property :install_web_server, BooleanValue, default: true
-      property :install_common_ruby_app_dependencies, BooleanValue, default: true
+        klass.property :install_passenger, BooleanValue, default: true
+        klass.property :force_install_passenger_from_source, BooleanValue, default: false
+        klass.property :install_web_server, BooleanValue, default: true
+        klass.property :install_common_ruby_app_dependencies, BooleanValue, default: true
+      end
 
       def install_database?
         external_database.nil?
@@ -64,6 +65,15 @@ module Pomodori
           external_database.validate_and_finalize!(app_config)
         end
       end
+    end
+
+    class SetupParams < Pomodori::InfrastructureConfig
+      RESETUP_PROPERTIES = %w(
+        external_database
+      ).freeze
+
+      include SetupParamsLike
+      SetupParamsLike.install_properties!(self)
     end
   end
 end

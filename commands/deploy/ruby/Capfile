@@ -3,6 +3,6 @@ POMODORI_PARAMS_CLASS = Pomodori::Commands::DeployParams
 
 require 'capistrano/setup'
 require 'capistrano/deploy'
-import '../../lib/capistrano_support.rb'
+import '../../../lib/capistrano_support.rb'
 import 'config/initialize.rb'
 import 'config/check_setup.rb'

@@ -64,7 +64,7 @@ task :create_app_vhost => :create_app_dir do
     "Changes will be overwritten. Edit nginx-vhost-local.conf instead."
   config.puts "server {"
   config.puts "    listen 80;"
-  config.puts "    server_name #{APP_CONFIG.domain_names};"
+  config.puts "    server_name #{APP_CONFIG.domain_names} pomodori-#{PARAMS.app_id};"
   config.puts "    root #{app_dir}/current/public;"
   if APP_CONFIG.passenger
     config.puts "    passenger_enabled on;"

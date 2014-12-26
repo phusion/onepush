@@ -9,7 +9,7 @@ PARAMS.app_server_addresses.each_with_index do |address, i|
     hostname = uri.hostname.dup
     hostname << ":#{uri.port}" if uri.port
     server(hostname,
-      :user => uri.user || "root",
+      :user => APP_CONFIG.user,
       :roles => ["web", "app"],
       :primary => i == 0)
   end

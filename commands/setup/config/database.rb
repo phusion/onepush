@@ -110,10 +110,8 @@ task :create_app_database_config => :create_app_dir do
       if PARAMS.external_database
         config.merge!(PARAMS.external_database)
       else
-        config = {
-          "database" => APP_CONFIG.database_name,
-          "user"     => APP_CONFIG.database_user
-        }
+        config["database"] = APP_CONFIG.database_name
+        config["user"]     = APP_CONFIG.database_user
       end
       config["pool"] = 5
       config["encoding"] = "utf-8"
