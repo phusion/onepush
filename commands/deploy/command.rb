@@ -123,7 +123,6 @@ module Pomodori
           abort(" *** ERROR: " + fixup_params_error_message(e.message))
         end
 
-        autodetect_language_specific_params(params)
         params.if_needed = true
         params.validate_and_finalize!
         app_config.set_defaults!(params)

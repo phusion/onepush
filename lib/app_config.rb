@@ -75,7 +75,7 @@ module Pomodori
     property :memcached, BooleanValue, default: false
     property :redis, BooleanValue, default: false
 
-    property :ruby_version, String, default: '2.1.5'
+    property :ruby_version, String, default: DEFAULT_RUBY_VERSION
     property :ruby_manager, EnumValue(:ruby_manager, 'rvm'), default: 'rvm'
     property :rvm_min_version, String, default: '1.26.5'
 

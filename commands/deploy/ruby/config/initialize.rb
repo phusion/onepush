@@ -53,9 +53,7 @@ when 'chruby'
 end
 
 
-if PARAMS.bundler
-  require 'capistrano/bundler'
-end
+require 'capistrano/bundler'
 if PARAMS.rails
   require 'capistrano/rails/assets'
   require 'capistrano/rails/migrations'

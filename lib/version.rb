@@ -6,6 +6,10 @@ module Pomodori
   # version, then the user must run `pomodori migrate`.
   SETUP_VERSION  = "1.0"
 
+  DEFAULT_RUBY_VERSION = "2.1.5"
+
+  POMODORI_APP_NAME = ENV["POMODORI_APP_NAME"] || "Pomodori"
+
   def self.setup_version_compatible?(their_version)
     our_major, our_minor = SETUP_VERSION.split(".")
     their_major, their_minor = their_version.split(".")

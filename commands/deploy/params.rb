@@ -6,7 +6,6 @@ module Pomodori
       property :app_root, String, required: true
 
       # Ruby-only properties
-      property :bundler, BooleanValue
       property :rails, BooleanValue
     end
   end

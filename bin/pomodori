@@ -1,17 +1,10 @@
 #!/usr/bin/env ruby
-require 'optparse'
-
 ROOT = File.absolute_path(File.dirname(__FILE__) + "/..")
 STDOUT.sync = STDERR.sync = true
 ENV['POMODORI_PWD'] = Dir.pwd
 
 if RUBY_VERSION < '1.9'
   abort "This program requires Ruby 1.9 or later."
-end
-
-if !defined?(Bundler)
-  ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"
-  require 'bundler/setup'
 end
 
 module Pomodori
@@ -33,10 +26,15 @@ module Pomodori
 
     def dispatch_command
       case @command
+      when "init"
+        require_relative '../commands/init/command'
+        Pomodori::Commands::InitCommand.new(@argv).run
       when "setup"
+        setup_bundler
         require_relative '../commands/setup/command'
         Pomodori::Commands::SetupCommand.new(@argv).run
       when "deploy"
+        setup_bundler
         require_relative '../commands/deploy/command'
         Pomodori::Commands::DeployCommand.new(@argv).run
       when "migrate"
@@ -50,9 +48,16 @@ module Pomodori
     end
 
     def help
-      puts "Usage: pomodori <setup|deploy> [options...]"
+      puts "Usage: pomodori <init|setup|deploy> [options...]"
       puts
       puts "Type pomodori <COMMAND> --help for more information."
+    end
+
+    def setup_bundler
+      if !defined?(Bundler)
+        ENV['BUNDLE_GEMFILE'] = "#{ROOT}/Gemfile"
+        require 'bundler/setup'
+      end
     end
   end
 end
