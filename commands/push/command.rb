@@ -4,6 +4,7 @@ require 'paint'
 require_relative '../base'
 require_relative '../setup/params'
 require_relative '../../lib/constants'
+require_relative '../../lib/utils/hash_with_indifferent_access'
 
 module Pomodori
   module Commands
@@ -31,10 +32,15 @@ module Pomodori
         OptionParser.new do |opts|
           nl = "\n" + (" " * 37)
           opts.banner = "Usage: pomodori push [options]"
+          opts.separator "Pushes the app code at the current Git revision, to the Git repository on the"
+          opts.separator "server."
+          opts.separator ""
+          opts.separator "This command does *not* deploy a new release of your app: it merely ensures"
+          opts.separator "that the server has a copy of your app code. Use `pomodori deploy` to deploy a"
+          opts.separator "new release. The `deploy` command uses the `push` command internally."
           opts.separator ""
 
           opts.separator "Options:"
-          opts.separator "Mandatory options:"
           opts.on("--config FILENAME", String,
             "Load config from given file") do |filename|
             options[:loaded] = true
