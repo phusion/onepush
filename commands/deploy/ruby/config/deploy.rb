@@ -7,15 +7,14 @@ set :bundle_flags, "--deployment"
 namespace :deploy do
   after :updating, :upload_local_config_files do
     on roles(:app) do
+      # We do not put these files in the shared dir. The original
+      # files are probably in version control, so on the server they
+      # should be tied to a specific release.
       Dir["#{PARAMS.app_root}/config/*.pomodori"].each do |path|
         basename = File.basename(path, ".pomodori")
         subpath  = "config/#{basename}"
-
-        upload!(path, shared_path.join(subpath))
-        execute :chmod, "600", shared_path.join(subpath)
-        execute :rm, "-f", release_path.join(subpath)
-        execute :ln, "-s", shared_path.join(subpath),
-          release_path.join(subpath)
+        upload!(path, release_path.join(subpath))
+        execute :chmod, "600", release_path.join(subpath)
       end
     end
   end
