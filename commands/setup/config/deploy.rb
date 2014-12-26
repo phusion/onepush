@@ -6,7 +6,7 @@ require 'shellwords'
 require 'net/http'
 require 'net/https'
 require_relative '../../../lib/app_config'
-require_relative '../../../lib/version'
+require_relative '../../../lib/constants'
 
 TOTAL_STEPS = 16
 

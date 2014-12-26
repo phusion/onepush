@@ -1,6 +1,6 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
-require "#{lib}/version"
+require "#{lib}/constants"
 
 Gem::Specification.new do |spec|
   spec.name          = "pomodori"

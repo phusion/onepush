@@ -31,6 +31,20 @@ def _check_resetup_necessary(host)
   end
 
   if APP_CONFIG.type == 'ruby' && APP_CONFIG.ruby_manager == 'rvm'
+    if !test_cond("-e /usr/local/rvm/bin/rvm")
+      log_warn("RVM is not installed. Will re-setup server.")
+      return true
+    end
+
+    rvm_version = capture("/usr/local/rvm/bin/rvm --version").strip.split(" ")[1]
+    if rvm_version.to_s.empty?
+      log_warn("RVM appears to be broken. Will re-setup server.")
+      return true
+    elsif compare_version(rvm_version, APP_CONFIG.rvm_min_version) < 0
+      log_warn "RVM #{rvm_version} is older than required version #{APP_CONFIG.rvm_min_version}. Will re-setup server."
+      return true
+    end
+
     ruby_version = APP_CONFIG.ruby_version
     if !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
       log_warn("Ruby version #{ruby_version} not installed. Will re-setup server.")
@@ -45,6 +59,8 @@ task :check_resetup_necessary => [:install_essentials, :check_setup_version_comp
   if PARAMS.if_needed
     mutex  = Mutex.new
     states = []
+
+    log_notice "Checking whether server setup is up-to-date..."
 
     on roles(:app) do |host|
       should_resetup = _check_resetup_necessary(host)

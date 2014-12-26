@@ -2,7 +2,7 @@ require 'optparse'
 require 'stringio'
 require 'etc'
 require_relative '../base'
-require_relative '../../lib/version'
+require_relative '../../lib/constants'
 
 module Pomodori
   module Commands

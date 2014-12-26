@@ -3,7 +3,7 @@ require 'json'
 require 'paint'
 require_relative '../base'
 require_relative '../setup/params'
-require_relative '../../lib/version'
+require_relative '../../lib/constants'
 
 module Pomodori
   module Commands

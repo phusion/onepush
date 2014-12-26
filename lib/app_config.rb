@@ -5,7 +5,7 @@ require 'hashie/extensions/indifferent_access'
 require 'hashie/extensions/dash/indifferent_access'
 require_relative './utils/hashie_coerceable_property'
 require_relative './utils/coercers'
-require_relative './version'
+require_relative './constants'
 
 module Pomodori
   class AppConfig < Hashie::Trash

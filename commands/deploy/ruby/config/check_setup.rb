@@ -13,9 +13,6 @@ def check_server_setup_and_return_result(host, last_chance)
   id = PARAMS.app_id
   set :application, id
 
-  # TODO:
-  # check RVM version
-
   _check_setup_version_compatibility(host)
 
   # Infer app dir
@@ -40,16 +37,24 @@ def check_server_setup_and_return_result(host, last_chance)
   server_manifest = JSON.parse(server_manifest_str)
   set(:pomodori_server_manifest, server_manifest)
 
-  # Check whether the requested Ruby version is installed
-  if APP_CONFIG.ruby_version
-    set :rvm_ruby_version, APP_CONFIG.ruby_version
-  end
-  Rake::Task['rvm:hook'].reenable
-  invoke 'rvm:hook'
-  rvm_path = fetch(:rvm_path)
-  ruby_version = fetch(:rvm_ruby_version)
-  if !test("#{rvm_path}/bin/rvm #{ruby_version} do ruby --version")
-    return false
+  if APP_CONFIG.ruby_manager == 'rvm'
+    # Check whether RVM is up-to-date and whether the requested Ruby
+    # version is installed
+    if APP_CONFIG.ruby_version
+      set :rvm_ruby_version, APP_CONFIG.ruby_version
+    end
+    Rake::Task['rvm:hook'].reenable
+    invoke 'rvm:hook'
+    rvm_path = fetch(:rvm_path)
+    ruby_version = fetch(:rvm_ruby_version)
+    rvm_version = capture("#{rvm_path}/bin/rvm --version").strip.split(" ")[1]
+    if rvm_version.to_s.empty?
+      return false
+    elsif compare_version(rvm_version, APP_CONFIG.rvm_min_version) < 0
+      return false
+    elsif !test("#{rvm_path}/bin/rvm #{ruby_version} do ruby --version")
+      return false
+    end
   end
 
   # Check whether anything else has been changed, and thus requires
