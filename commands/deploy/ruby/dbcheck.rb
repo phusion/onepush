@@ -4,6 +4,7 @@
 # uses Rails.
 
 require 'active_record'
+require 'yaml'
 
 rails_env = ENV['RAILS_ENV'] || ENV['RACK_ENV'] || 'development'
 config = YAML.load_file("config/database.yml")[rails_env] || {}
