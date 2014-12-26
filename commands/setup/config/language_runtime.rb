@@ -23,7 +23,7 @@ end
 
 def install_or_upgrade_rvm(host)
   if !test_cond("-e /usr/local/rvm/bin/rvm")
-    instal_rvm(host)
+    install_rvm(host)
   else
     rvm_version = capture("/usr/local/rvm/bin/rvm --version").strip.split(" ")[1]
     if rvm_version.to_s.empty?
