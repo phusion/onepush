@@ -30,6 +30,22 @@ module Pomodori
         end
       end
 
+      def maybe_load_default_config_files(dir = Dir.pwd)
+        if !@options[:loaded]
+          if File.exist?("#{dir}/pomodori.json")
+            @options.merge!(JSON.parse(File.read("#{dir}/pomodori.json")))
+            @options[:loaded] = true
+          elsif File.exist?("#{dir}/onepush.json")
+            @options.merge!(JSON.parse(File.read("#{dir}/onepush.json")))
+            @options[:loaded] = true
+          else
+            abort " *** ERROR: No configuration file found. Please run " +
+              "`pomodori init` first, or specify a configuration file " +
+              "with --config."
+          end
+        end
+      end
+
       def setup_paint_mode
         if !STDOUT.tty?
           Paint.mode = 0

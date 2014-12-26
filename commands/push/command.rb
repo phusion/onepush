@@ -10,6 +10,7 @@ module Pomodori
     class PushCommand < Base
       def run
         parse_options
+        maybe_load_default_config_files
         validate_and_finalize_options
         setup_paint_mode
         git_urls.each_with_index do |url, i|
@@ -30,23 +31,17 @@ module Pomodori
 
           opts.separator "Options:"
           opts.separator "Mandatory options:"
-          opts.on("--params FILENAME", String,
-            "The config file containing command#{nl}" +
-            "parameters") do |filename|
-            options.replace(JSON.parse(File.read(filename)))
+          opts.on("--config FILENAME", String,
+            "Load config from given file") do |filename|
+            options[:loaded] = true
+            options.merge!(JSON.parse(File.read(filename)))
           end
-          opts.on("--params-json JSON", String,
-            "The command parameters as a JSON string") do |json|
-            options.replace(JSON.parse(json))
+          opts.on("--config-json JSON", String,
+            "Load config as a JSON string") do |json|
+            options[:loaded] = true
+            options.merge!(JSON.parse(json))
           end
-          opts.on("--app-config FILENAME", String,
-            "The app config file") do |filename|
-            options[:app_config] = JSON.parse(File.read(filename))
-          end
-          opts.on("--app-config-json JSON", String,
-            "The app config as a JSON string") do |json|
-            options[:app_config] = JSON.parse(json)
-          end
+
           opts.separator ""
           opts.on("--help", "Show this help") do
             options[:help] = true

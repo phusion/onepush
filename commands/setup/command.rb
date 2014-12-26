@@ -5,12 +5,14 @@ require 'net/http'
 require 'paint'
 require_relative '../base'
 require_relative './params'
+require_relative '../../lib/utils/hash_with_indifferent_access'
 
 module Pomodori
   module Commands
     class SetupCommand < Base
       def run
         parse_options
+        maybe_load_default_config_files
         validate_and_finalize_options
         setup_paint_mode
         prepare_announcement
@@ -24,10 +26,10 @@ module Pomodori
 
     private
       def self.create_default_options
-        {
+        HashWithIndifferentAccess.new(
           :app_server_addresses => [],
           :ssh_keys             => []
-        }
+        )
       end
 
       def self.create_option_parser(options)
@@ -36,27 +38,19 @@ module Pomodori
           opts.banner = "Usage: pomodori setup [OPTIONS]"
           opts.separator ""
 
-          opts.separator "Mandatory options:"
-          opts.on("--params FILENAME", String,
-            "The config file containing command#{nl}" +
-            "parameters") do |filename|
-            options.replace(JSON.parse(File.read(filename)))
+          opts.separator "Options:"
+          opts.on("--config FILENAME", String,
+            "Load config from given file") do |filename|
+            options[:loaded] = true
+            options.merge!(JSON.parse(File.read(filename)))
           end
-          opts.on("--params-json JSON", String,
-            "The command parameters as a JSON string") do |json|
-            options.replace(JSON.parse(json))
-          end
-          opts.on("--app-config FILENAME", String,
-            "The app config file") do |filename|
-            options[:app_config] = JSON.parse(File.read(filename))
-          end
-          opts.on("--app-config-json JSON", String,
-            "The app config as a JSON string") do |json|
-            options[:app_config] = JSON.parse(json)
+          opts.on("--config-json JSON", String,
+            "Load config as a JSON string") do |json|
+            options[:loaded] = true
+            options.merge!(JSON.parse(json))
           end
 
           opts.separator ""
-          opts.separator "Optional options:"
           opts.on("--app-id NAME", String, "The application ID") do |value|
             options[:app_id] = value
           end
@@ -92,6 +86,7 @@ module Pomodori
             "connections") do
             options[:vagrant_key] = true
           end
+
           opts.separator ""
           opts.on("--progress", "Output progress indicators") do
             options[:progress] = true
@@ -102,6 +97,7 @@ module Pomodori
           opts.on("--progress-ceil NUMBER", Float, "Default: 1") do |val|
             options[:progress_ceil] = val
           end
+
           opts.separator ""
           opts.on("--trace", "-t", "Show detailed backtraces and trace tasks") do
             options[:trace] = true
@@ -114,7 +110,7 @@ module Pomodori
 
       def validate_and_finalize_options
         begin
-          app_config = AppConfig.new(@options.delete(:app_config) || @options)
+          app_config = AppConfig.new(@options)
         rescue ArgumentError => e
           abort(" *** ERROR: " + AppConfig.fixup_error_message(e.message))
         end
