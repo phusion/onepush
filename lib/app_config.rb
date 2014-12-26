@@ -104,12 +104,5 @@ module Pomodori
       message.sub!(/^The property /, "The app config property ")
       message
     end
-
-    def to_server_app_config
-      result = to_hash
-      result['pomodori_version'] = VERSION_STRING
-      result['pomodori_setup_version'] = SETUP_VERSION
-      result
-    end
   end
 end

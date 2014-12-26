@@ -21,6 +21,18 @@ module Pomodori
           component.to_i
         end
       end
+
+      def generate_server_manifest(setup_params, app_config)
+        result = {
+          'pomodori_version' => VERSION_STRING,
+          'pomodori_setup_version' => SETUP_VERSION
+        }
+        Pomodori::Commands::SetupParams::RESETUP_PROPERTIES.each do |name|
+          result[name] = setup_params[name]
+        end
+        result.merge!(app_config)
+        result
+      end
     end
   end
 end

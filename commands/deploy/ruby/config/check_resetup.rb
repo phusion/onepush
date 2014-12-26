@@ -33,9 +33,9 @@ def check_server_setup_and_return_result(host, last_chance)
   set(:repo_url, "#{app_dir}/pomodori_repo")
 
   # Download previous setup manifest
-  json = download_to_string("#{app_dir}/pomodori-app-config.json")
-  server_app_config = JSON.parse(io.string)
-  set(:pomodori_server_app_config, server_app_config)
+  server_manifest_str = download_to_string("#{app_dir}/pomodori-manifest.json")
+  server_manifest = JSON.parse(server_manifest_str)
+  set(:pomodori_server_manifest, server_manifest)
 
   # Check whether the requested Ruby version is installed
   if APP_CONFIG.ruby_version
@@ -52,7 +52,12 @@ def check_server_setup_and_return_result(host, last_chance)
   # Check whether anything else has been changed, and thus requires
   # a new 'pomodori setup' call
   Pomodori::AppConfig::CHANGEABLE_PROPERTIES.each do |name|
-    if APP_CONFIG[name] != server_app_config[name]
+    if APP_CONFIG[name] != server_manifest[name]
+      return false
+    end
+  end
+  Pomodori::SetupParams::RESETUP_PROPERTIES.each do |name|
+    if PARAMS[name] != server_manifest[name]
       return false
     end
   end

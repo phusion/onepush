@@ -32,15 +32,15 @@ task :run_postsetup => :install_essentials do
   end
 end
 
-task :update_pomodori_app_config_on_server => :install_essentials do
-  log_notice "Saving app config information..."
+task :update_pomodori_server_manifest => :install_essentials do
+  log_notice "Saving manifest on the server..."
   id      = PARAMS.app_id
   app_dir = APP_CONFIG.app_dir
-  config  = JSON.pretty_generate(APP_CONFIG.to_server_app_config)
+  config  = JSON.pretty_generate(generate_server_manifest(PARAMS, APP_CONFIG))
 
   on roles(:app) do |host|
     user = APP_CONFIG.user
-    sudo_upload(host, config, "#{app_dir}/pomodori-app-config.json",
+    sudo_upload(host, config, "#{app_dir}/pomodori-manifest.json",
       :chown => "#{user}:",
       :chmod => "600")
     sudo(host, "mkdir -p /etc/pomodori/apps && " +
@@ -53,7 +53,8 @@ task :update_pomodori_app_config_on_server => :install_essentials do
     sudo(host, "mkdir -p /etc/pomodori/setup && " +
       "cd /etc/pomodori/setup && " +
       "date +%s > last_run_time && " +
-      "echo #{Pomodori::VERSION_STRING} > last_run_version")
+      "echo #{Pomodori::VERSION_STRING} > last_run_version && " +
+      "echo #{Pomodori::SETUP_VERSION} > last_run_setup_version")
   end
 end
 
@@ -127,7 +128,7 @@ task :setup do
   invoke :run_postsetup
   report_progress(14, TOTAL_STEPS)
 
-  invoke :update_pomodori_app_config_on_server
+  invoke :update_pomodori_server_manifest
   report_progress(15, TOTAL_STEPS)
   invoke :restart_services
   report_progress(TOTAL_STEPS, TOTAL_STEPS)

@@ -1,28 +1,34 @@
 def _check_resetup_necessary(host)
   id       = PARAMS.app_id
   app_dir  = APP_CONFIG.app_dir
-  pomodori_repo_path     = "#{app_dir}/pomodori_repo"
-  server_app_config_path = "#{app_dir}/pomodori-app-config.json"
+  pomodori_repo_path   = "#{app_dir}/pomodori_repo"
+  server_manifest_path = "#{app_dir}/pomodori-manifest.json"
 
   # TODO:
   # check RVM version
   # check whether Pomodori version has increased since previous run
 
-  if !sudo_test(host, "[[ -e #{pomodori_repo_path} && -e /etc/pomodori/apps/#{id} && -e #{server_app_config_path} ]]")
+  if !sudo_test(host, "[[ -e #{pomodori_repo_path} && -e /etc/pomodori/apps/#{id} && -e #{server_manifest_path} ]]")
     return true
   end
 
-  server_app_config_str = sudo_download_to_string(host, server_app_config_path)
+  server_manifest_str = sudo_download_to_string(host, server_manifest_path)
   begin
-    server_app_config = JSON.parse(server_app_config_str)
+    server_manifest = JSON.parse(server_manifest_str)
   rescue JSON::ParserError
-    log_warn("The app config file on the server (#{server_app_config_path}) is " +
+    log_warn("The manifest file on the server (#{server_manifest_path}) is " +
       "corrupted. Will re-setup server in order to fix things.")
     return true
   end
 
   Pomodori::AppConfig::CHANGEABLE_PROPERTIES.each do |name|
-    if APP_CONFIG[name] != server_app_config[name]
+    if APP_CONFIG[name] != server_manifest[name]
+      log_warn("The app config has changed. Will re-setup server.")
+      return true
+    end
+  end
+  Pomodori::Commands::SetupParams::RESETUP_PROPERTIES.each do |name|
+    if PARAMS[name] != server_manifest[name]
       log_warn("The app config has changed. Will re-setup server.")
       return true
     end
