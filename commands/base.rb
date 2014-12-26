@@ -56,6 +56,14 @@ module Pomodori
         ["High five", "Awesome", "Hurray", "Congratulations", "Wow", "Splendid"].sample
       end
 
+      def notice(message)
+        puts "NOTICE -- #{message}"
+      end
+
+      def report_progress(value)
+        puts "PROGRS -- #{value}"
+      end
+
       def prepare_announcement
         @announcement_thread = Thread.new do
           http = Net::HTTP.new("phusion.github.io", 80)

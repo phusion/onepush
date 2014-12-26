@@ -137,13 +137,14 @@ module Pomodori
       end
 
       def run_capistrano
-        Dir.chdir("#{ROOT}/commands/setup")
         args = ["bundle", "exec", "cap"]
         if @options[:trace]
           args << "-t"
         end
         args.concat(["production", "setup"])
-        system(*args)
+        Dir.chdir("#{ROOT}/commands/setup") do
+          system(*args)
+        end
       end
 
       def report_success

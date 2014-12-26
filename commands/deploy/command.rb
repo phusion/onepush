@@ -5,6 +5,7 @@ require 'net/http'
 require 'paint'
 require_relative '../base'
 require_relative './params'
+require_relative '../setup/command'
 require_relative '../push/command'
 require_relative '../../lib/utils/hash_with_indifferent_access'
 
@@ -15,6 +16,7 @@ module Pomodori
         parse_options
         validate_and_finalize_options
         setup_paint_mode
+        setup
         push
         prepare_announcement
         if run_capistrano
@@ -85,12 +87,6 @@ module Pomodori
           opts.on("--progress", "Output progress indicators") do
             options[:progress] = true
           end
-          opts.on("--progress-base NUMBER", Float, "Default: 0") do |val|
-            options[:progress_base] = val
-          end
-          opts.on("--progress-ceil NUMBER", Float, "Default: 1") do |val|
-            options[:progress_ceil] = val
-          end
 
           opts.separator ""
           opts.on("--no-push", "Do not push Git before deploying") do
@@ -160,24 +156,38 @@ module Pomodori
         message
       end
 
+      def setup
+        SetupCommand.new([
+          "--config-json", JSON.generate(@params),
+          "--progress-ceil", "0.45",
+          "--if-needed"
+        ]).run
+      end
+
       def push
         if @options[:push]
+          notice "Pushing code to server..."
           PushCommand.new([
             "--config-json", JSON.generate(@params),
             "--app-root", @params.app_root
           ]).run
+          if @params.progress
+            report_progress 0.55
+          end
         end
       end
 
       def run_capistrano
-        Dir.chdir("#{ROOT}/commands/deploy/ruby")
+        @params.progress_base = 0.55
         ENV["POMODORI_PARAMS"] = JSON.generate(@params)
         args = ["bundle", "exec", "cap"]
         if @options[:trace]
           args << "-t"
         end
         args.concat(["production", @options[:task]])
-        system(*args)
+        Dir.chdir("#{ROOT}/commands/deploy/ruby") do
+          system(*args)
+        end
       end
 
       def report_success

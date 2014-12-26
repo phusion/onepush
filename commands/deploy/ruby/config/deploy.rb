@@ -24,15 +24,17 @@ namespace :deploy do
   # We also don't run the task if ActiveRecord is disabled in the app.
   Rake::Task["deploy:migrate"].clear_actions
   task :migrate => [:set_rails_env] do
-    on primary fetch(:migration_role) do |host|
-      within release_path do
-        with rails_env: fetch(:rails_env) do
-          output = capture(:rake, "-T")
-          if output =~ / db:schema:/
-            if fetch(:schema_load) || database_empty?(host)
-              execute :rake, "db:schema:load"
-            else
-              execute :rake, "db:migrate"
+    if APP_CONFIG.database
+      on primary fetch(:migration_role) do |host|
+        within release_path do
+          with rails_env: fetch(:rails_env) do
+            output = capture(:rake, "-T")
+            if output =~ / db:schema:/
+              if fetch(:schema_load) || database_empty?(host)
+                execute :rake, "db:schema:load"
+              else
+                execute :rake, "db:migrate"
+              end
             end
           end
         end

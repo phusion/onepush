@@ -31,7 +31,7 @@ module Pomodori
       end
 
       def install_database?
-        external_database.nil?
+        app_config.database && external_database.nil?
       end
 
       def validate_and_finalize!
