@@ -23,6 +23,10 @@ module Pomodori
       end
 
     private
+      def self.create_default_options
+        HashWithIndifferentAccess.new
+      end
+
       def self.create_option_parser(options)
         OptionParser.new do |opts|
           nl = "\n" + (" " * 37)
@@ -43,6 +47,13 @@ module Pomodori
           end
 
           opts.separator ""
+          opts.on("--app-root PATH", String,
+            "Path to the application. Default: current#{nl}" +
+            "working directory") do |value|
+            options[:app_root] = value
+          end
+
+          opts.separator ""
           opts.on("--help", "Show this help") do
             options[:help] = true
           end
@@ -50,8 +61,10 @@ module Pomodori
       end
 
       def validate_and_finalize_options
-        if @options.empty?
-          abort(" *** ERROR: please pass a config file with --params.")
+        if @options[:app_root]
+          @options[:app_root] = File.absolute_path(@options[:app_root])
+        else
+          @options[:app_root] = Dir.pwd
         end
 
         begin

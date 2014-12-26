@@ -5,6 +5,7 @@ require 'net/http'
 require 'paint'
 require_relative '../base'
 require_relative './params'
+require_relative '../push/command'
 require_relative '../../lib/utils/hash_with_indifferent_access'
 
 module Pomodori
@@ -14,6 +15,7 @@ module Pomodori
         parse_options
         validate_and_finalize_options
         setup_paint_mode
+        push
         prepare_announcement
         if run_capistrano
           report_success
@@ -27,8 +29,9 @@ module Pomodori
       def self.create_default_options
         HashWithIndifferentAccess.new(
           :app_server_addresses => [],
-          :ssh_keys             => [],
-          :task                 => 'deploy'
+          :ssh_keys  => [],
+          :push      => true,
+          :task      => 'deploy'
         )
       end
 
@@ -90,6 +93,9 @@ module Pomodori
           end
 
           opts.separator ""
+          opts.on("--no-push", "Do not push Git before deploying") do
+            options[:push] = false
+          end
           opts.on("--task NAME", String, "Internal task to execute. Default: deploy") do |value|
             options[:task] = value
           end
@@ -112,23 +118,21 @@ module Pomodori
         maybe_load_default_config_files(@options[:app_root])
 
         begin
-          app_config = AppConfig.new(@options.delete(:app_config) || @options)
+          @app_config = AppConfig.new(@options.delete(:app_config) || @options)
         rescue ArgumentError => e
           abort(" *** ERROR: " + AppConfig.fixup_error_message(e.message))
         end
 
         begin
-          params = DeployParams.new(@options)
-          params.app_config = app_config
+          @params = DeployParams.new(@options)
+          @params.app_config = @app_config
         rescue ArgumentError => e
           abort(" *** ERROR: " + fixup_params_error_message(e.message))
         end
 
-        params.if_needed = true
-        params.validate_and_finalize!
-        app_config.set_defaults!(params)
-
-        ENV["POMODORI_PARAMS"] = JSON.generate(params)
+        @params.if_needed = true
+        @params.validate_and_finalize!
+        @app_config.set_defaults!(@params)
       end
 
       def autodetect_language_specific_params(params)
@@ -156,8 +160,18 @@ module Pomodori
         message
       end
 
+      def push
+        if @options[:push]
+          PushCommand.new([
+            "--config-json", JSON.generate(@params),
+            "--app-root", @params.app_root
+          ]).run
+        end
+      end
+
       def run_capistrano
         Dir.chdir("#{ROOT}/commands/deploy/ruby")
+        ENV["POMODORI_PARAMS"] = JSON.generate(@params)
         args = ["bundle", "exec", "cap"]
         if @options[:trace]
           args << "-t"

@@ -110,7 +110,7 @@ module Pomodori
 
       def validate_and_finalize_options
         begin
-          app_config = AppConfig.new(@options)
+          app_config = AppConfig.new(@options.delete(:app_config) || @options)
         rescue ArgumentError => e
           abort(" *** ERROR: " + AppConfig.fixup_error_message(e.message))
         end
