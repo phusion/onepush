@@ -2,6 +2,7 @@ task :autodetect_os do
   log_notice "Autodetecting operating system..."
   on roles(:app, :db) do |host|
     if test_cond("-e /etc/redhat-release || -e /etc/centos-release")
+      abort "Red Hat and CentOS are not supported right now."
       host.set(:os_class, :redhat)
 
       info = capture("cat /etc/redhat-release").gsub("\r\n", "\n")
@@ -34,6 +35,7 @@ task :autodetect_os do
       end
 
     elsif test_cond("-e /etc/system-release") && (info = capture("cat /etc/system-release")) =~ /Amazon/
+      abort "Amazon Linux is not supported right now."
       host.set(:os_class, :redhat)
       host.set(:os, :amazon_linux)
 
@@ -79,7 +81,9 @@ task :autodetect_os do
 
     else
       fatal_and_abort "Unsupported server operating system. #{POMODORI_APP_NAME} only " +
-        "supports Red Hat, CentOS, Amazon Linux, Debian and Ubuntu."
+        "supports Ubuntu."
+      #fatal_and_abort "Unsupported server operating system. #{POMODORI_APP_NAME} only " +
+      #  "supports Red Hat, CentOS, Amazon Linux, Debian and Ubuntu."
     end
 
     arch = capture("/bin/uname -p").strip
