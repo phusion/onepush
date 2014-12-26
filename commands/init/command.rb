@@ -15,6 +15,13 @@ module Pomodori
       end
 
     private
+      def self.create_default_options
+        {
+          :path => "pomodori.json",
+          :edit_gemfile => true
+        }
+      end
+
       def self.create_option_parser(options)
         OptionParser.new do |opts|
           nl = "\n" + (" " * 37)
@@ -23,8 +30,16 @@ module Pomodori
           opts.separator ""
 
           opts.separator "Options:"
+          opts.on("-o", "--output PATH", String, "Write config file to given path.#{nl}" +
+            "Implies --force. Default: pomodori.json") do |value|
+            options[:path] = value
+            options[:force] = true
+          end
           opts.on("--force", "Overwrite existing Pomodori config file") do
             options[:force] = true
+          end
+          opts.on("--no-edit-gemfile", "Do not modify Gemfile automatically") do
+            options[:edit_gemfile] = false
           end
           opts.on("--help", "Show this help") do
             options[:help] = true
@@ -44,15 +59,15 @@ module Pomodori
       end
 
       def check_file_not_exists
-        if !@options[:force] && File.exist?("#{@app_root}/pomodori.json")
-          abort " *** ERROR: #{@app_root}/pomodori.json already exists."
+        if !@options[:force] && File.exist?(@options[:path])
+          abort " *** ERROR: #{@options[:path]} already exists."
         end
       end
 
       def generate_config
         io = StringIO.new
-        io.puts %Q{    // A unique identifier for your app. Once you've run a}
-        io.puts %Q{    // 'setup' or 'deploy', do not change this ID!}
+        io.puts %Q{    // A unique identifier for your app. Once you've run `pomodori setup`}
+        io.puts %Q{    // `pomodori deploy`, do not change this ID!}
         io.puts %Q{    "app_id": #{app_id.inspect},}
         io.puts
         io.puts %Q{    // Host name(s) that your app listens on, in Nginx}
@@ -95,25 +110,35 @@ module Pomodori
         end
         io.puts %Q{    ]}
 
-        File.open("#{@app_root}/pomodori.json", "w") do |f|
+        File.open(@options[:path], "w") do |f|
+          f.puts %Q{// The Pomodori config file specifies what your app needs and where your}
+          f.puts %Q{// servers are. Please edit this file as you see fit. When done, run}
+          f.puts %Q{// `pomodori deploy` to deploy your app.}
           f.puts '{'
           f.puts io.string.sub(/,[\r\n]*\Z/, '')
           f.puts '}'
         end
-        puts "Generated #{@app_root}/pomodori.json"
+        puts "Generated #{@options[:path]}. Your next two steps are:"
+        puts "1. Edit #{@options[:path]}, customize things as you see fit"
+        puts "2. Run `pomodori deploy` to deploy your app"
       end
 
       def modify_gemfile
         if detect_language == "ruby"
           contents = File.read(gemfile)
           if contents !~ /'pg'/ && contents !~ /"pg"/
-            File.open(gemfile, "a") do |f|
-              f.puts
-              f.puts %Q{gem "pg"}
-            end
             puts
-            puts "NOTICE: #{POMODORI_APP_NAME} requires PostgreSQL, so the 'pg' gem " +
-              "has been added to your Gemfile. Please run 'bundle install'."
+            if @options[:edit_gemfile]
+              File.open(gemfile, "a") do |f|
+                f.puts
+                f.puts %Q{gem "pg"}
+              end
+              puts "NOTICE: #{POMODORI_APP_NAME} requires PostgreSQL, so the 'pg' gem " +
+                "has been added to your Gemfile. Please run `bundle install`."
+            else
+              puts "WARNING: #{POMODORI_APP_NAME} requires PostgreSQL. You should add " +
+                "the 'pg' gem to your Gemfile and run `bundle install` afterwards."
+            end
           end
         end
       end

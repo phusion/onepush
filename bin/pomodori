@@ -7,6 +7,8 @@ if RUBY_VERSION < '1.9'
   abort "This program requires Ruby 1.9 or later."
 end
 
+require_relative '../lib/constants'
+
 module Pomodori
   class App
     def initialize(argv)
@@ -52,9 +54,22 @@ module Pomodori
     end
 
     def help
-      puts "Usage: pomodori <init|setup|push|deploy> [options...]"
+      puts "Usage: pomodori <SUBCOMMAND> [OPTIONS...]"
       puts
-      puts "Type pomodori <COMMAND> --help for more information."
+      puts "Available subcommands:"
+      puts
+      puts "  init     Create a #{POMODORI_APP_NAME} config file"
+      puts "  setup    Prepare servers with necessary stuff"
+      puts "  push     Push app code to the server. Does not deploy your app"
+      puts "  deploy   Deploy a new app release"
+      puts
+      puts "Type `pomodori <SUBCOMMAND> --help` to learn more about a specific subcommand."
+      puts
+      puts "-------------- TURORIAL --------------"
+      puts "Using #{POMODORI_APP_NAME} for the first time? Here's what you should do:"
+      puts " 1. Run `pomodori init`"
+      puts " 2. Edit pomodori.json"
+      puts " 3. Run `pomodori deploy`"
     end
 
     def setup_bundler
