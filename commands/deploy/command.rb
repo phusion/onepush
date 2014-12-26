@@ -26,7 +26,8 @@ module Pomodori
       def self.create_default_options
         {
           :app_server_addresses => [],
-          :ssh_keys             => []
+          :ssh_keys             => [],
+          :task                 => 'deploy'
         }
       end
 
@@ -40,11 +41,11 @@ module Pomodori
           opts.on("--params FILENAME", String,
             "The config file containing command#{nl}" +
             "parameters") do |filename|
-            options.replace(JSON.parse(File.read(filename)))
+            options.merge!(JSON.parse(File.read(filename)))
           end
           opts.on("--params-json JSON", String,
             "The command parameters as a JSON string") do |json|
-            options.replace(JSON.parse(json))
+            options.merge!(JSON.parse(json))
           end
           opts.on("--app-config FILENAME", String,
             "The app config file") do |filename|
@@ -94,6 +95,9 @@ module Pomodori
             options[:progress_ceil] = val
           end
           opts.separator ""
+          opts.on("--task NAME", String, "Internal task to execute. Default: deploy") do |value|
+            options[:task] = value
+          end
           opts.on("--trace", "-t", "Show detailed backtraces and trace tasks") do
             options[:trace] = true
           end
@@ -161,7 +165,7 @@ module Pomodori
         if @options[:trace]
           args << "-t"
         end
-        args.concat(["production", "deploy"])
+        args.concat(["production", @options[:task]])
         system(*args)
       end
 

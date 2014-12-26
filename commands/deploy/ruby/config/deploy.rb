@@ -5,21 +5,34 @@ set :bundle_roles, :app
 set :bundle_flags, "--deployment"
 
 namespace :deploy do
+  after :updating, :upload_local_config_files do
+    on roles(:app) do
+      Dir["#{PARAMS.app_root}/config/*.pomodori"].each do |path|
+        basename = File.basename(path, ".pomodori")
+        subpath  = "config/#{basename}"
+
+        upload!(path, shared_path.join(subpath))
+        execute :chmod, "600", shared_path.join(subpath)
+        execute :rm, "-f", release_path.join(subpath)
+        execute :ln, "-s", shared_path.join(subpath),
+          release_path.join(subpath)
+      end
+    end
+  end
+
   # Override migrate task from capistrano-rails.
   # We add the ability to run db:schema:load instead of db:migrate.
   # We also don't run the task if ActiveRecord is disabled in the app.
   Rake::Task["deploy:migrate"].clear_actions
   task :migrate => [:set_rails_env] do
-    on primary fetch(:migration_role) do
+    on primary fetch(:migration_role) do |host|
       within release_path do
         with rails_env: fetch(:rails_env) do
           output = capture(:rake, "-T")
-          if fetch(:schema_load)
-            if output =~ / db:schema:load /
+          if output =~ / db:schema:/
+            if fetch(:schema_load) || database_empty?(host)
               execute :rake, "db:schema:load"
-            end
-          else
-            if output =~ / db:migrate /
+            else
               execute :rake, "db:migrate"
             end
           end
@@ -31,12 +44,13 @@ namespace :deploy do
   desc 'Restart application'
   task :restart do
     on roles(:app), in: :sequence, wait: 5 do
-      execute :'passenger-config', "restart-app", current_path, "--ignore-app-not-running"
+      #execute :'passenger-config', "restart-app", current_path, "--ignore-app-not-running"
+      execute :touch, release_path.join("tmp/restart.txt")
     end
   end
 
   after :publishing, :create_ruby_version_file do
-    if APP_CONIFG.ruby_version
+    if APP_CONFIG.ruby_version
       log_info "Creating .ruby-version file..."
       on roles(:app) do
         io = StringIO.new

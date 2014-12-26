@@ -51,12 +51,16 @@ module Pomodori
         end
       end
 
-      def mktempdir(host)
+      def mktempdir(host, options = {})
         tmpdir = capture("mktemp -d /tmp/pomodori.XXXXXXXX").strip
         begin
           yield tmpdir
         ensure
-          sudo(host, "rm -rf #{tmpdir}")
+          if options.fetch(:sudo, true)
+            sudo(host, "rm -rf #{tmpdir}")
+          else
+            execute "rm -rf #{tmpdir}"
+          end
         end
       end
 

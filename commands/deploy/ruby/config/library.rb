@@ -72,3 +72,13 @@ def check_server_setup_and_return_result(host, last_chance)
 
   true
 end
+
+def database_empty?(host)
+  result = false
+  mktempdir(host, :sudo => false) do |tmpdir|
+    upload!("#{ROOT}/commands/deploy/ruby/dbcheck.rb", "#{tmpdir}/dbcheck.rb")
+    output = capture(:bundle, "exec", "ruby", "#{tmpdir}/dbcheck.rb")
+    result = output =~ /database is empty/
+  end
+  result
+end
