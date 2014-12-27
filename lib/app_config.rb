@@ -80,7 +80,7 @@ module Pomodori
 
     property :ruby_version, String, default: DEFAULT_RUBY_VERSION
     property :ruby_manager, EnumValue(:ruby_manager, 'rvm'), default: 'rvm'
-    property :rvm_min_version, String, default: '1.26.5'
+    property :rvm_min_version, String, default: '1.26.6'
     property :nodejs_version, String, default: DEFAULT_NODEJS_VERSION
     property :nodejs_manager, EnumValue(:nodejs_manager, 'nvm'), default: 'nvm'
     property :nvm_min_version, String, default: '0.22.0'

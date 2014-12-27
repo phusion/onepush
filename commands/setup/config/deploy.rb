@@ -32,7 +32,7 @@ task :run_postsetup => :install_essentials do
   end
 end
 
-task :update_pomodori_server_manifest => :install_essentials do
+task :update_pomodori_server_manifest => [:install_essentials, :create_app_dir] do
   log_notice "Saving manifest on the server..."
   id      = PARAMS.app_id
   app_dir = APP_CONFIG.app_dir
@@ -43,10 +43,6 @@ task :update_pomodori_server_manifest => :install_essentials do
     sudo_upload(host, config, "#{app_dir}/pomodori-manifest.json",
       :chown => "#{user}:",
       :chmod => "600")
-    sudo(host, "mkdir -p /etc/pomodori/apps && " +
-      "cd /etc/pomodori/apps && " +
-      "rm -f #{id} && " +
-      "ln -s #{app_dir} #{id}")
   end
 
   on roles(:app, :db) do |host|

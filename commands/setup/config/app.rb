@@ -19,6 +19,7 @@ end
 
 task :create_app_dir => [:install_essentials, :create_app_user] do
   log_notice "Creating directory for app..."
+  id    = PARAMS.app_id
   path  = APP_CONFIG.app_dir
   owner = APP_CONFIG.user
 
@@ -33,13 +34,18 @@ task :create_app_dir => [:install_essentials, :create_app_user] do
 
     sudo(host, "mkdir -p #{repo_dirs} && chown #{owner}: #{repo_dirs} && chmod u=rwx,g=,o= #{repo_dirs}")
     sudo(host, "cd #{pomodori_repo_path} && if ! [[ -e HEAD ]]; then sudo -u #{owner} git init --bare; fi")
+
+    sudo(host, "mkdir -p /etc/pomodori/apps && " +
+      "cd /etc/pomodori/apps && " +
+      "rm -f #{id} && " +
+      "ln -s #{path} #{id}")
   end
 end
 
-task :create_app_hosts_entry => :install_essentials do
+task :create_app_hosts_entry => :create_app_dir do
   log_notice "Creating /etc/hosts entry for app..."
   on roles(:app) do |host|
-    apps = sudo_capture(host, "ls -1 /etc/pomodori/apps").strip.split(/[\r\n]+/)
+    apps = sudo_capture(host, "test -e /etc/pomodori/apps && ls -1 /etc/pomodori/apps").strip.split(/[\r\n]+/)
     apps.map! { |path| path.sub(/.*\//, '') }
 
     content = apps.map do |app_id|

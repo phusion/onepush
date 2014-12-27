@@ -27,6 +27,10 @@ def install_or_upgrade_rvm(host)
     end
   end
 
+  if host.username
+    sudo(host, "usermod -a -G rvm #{host.username}")
+  end
+
   ruby_version = APP_CONFIG.ruby_version
   if ruby_version && !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
     log_info "Installing Ruby interpreter: #{ruby_version}"
@@ -117,7 +121,7 @@ def install_common_ruby_app_dependencies
         apt_get_install(host, packages)
         if test_cond("-e /usr/bin/nodejs && ! -e /usr/local/bin/node")
           # Debian renamed the Node.js command. We fix this.
-          sudo(host, "ln -s /usr/local/nodejs /usr/local/bin/node")
+          sudo(host, "ln -sf /usr/bin/nodejs /usr/local/bin/node")
         end
       else
         raise "Bug"
