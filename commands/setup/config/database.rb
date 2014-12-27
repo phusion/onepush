@@ -13,8 +13,7 @@ task :install_dbms => :install_essentials do
       when :redhat
         case type
         when 'postgresql'
-          # TODO: install hstore (maybe in some contrib package)
-          yum_install(host, %w(postgresql postgresql-server))
+          yum_install(host, %w(postgresql postgresql-server postgresql-contrib))
           files = sudo_capture(host, "ls -1 /var/lib/pgsql/data")
           if files.empty?
             sudo(host, "service postgresql initdb")
