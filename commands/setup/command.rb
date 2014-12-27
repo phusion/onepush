@@ -19,7 +19,6 @@ module Pomodori
         validate_and_finalize_options
         setup_paint_mode
         prepare_announcement if @options[:announcements]
-        print_announcement; exit
         if run_capistrano
           report_success
           print_announcement if @options[:announcements]
