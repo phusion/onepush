@@ -5,7 +5,7 @@ Version 0.x will be focused on implementing basic features and ensuring everythi
  * 0.2: Chef integration
  * 0.3: SSL, environment variables, firewall setup
  * 0.4: Debian support
- * 0.5: multi server support
+ * 0.5: multi server or external redis/memcached
  * 0.9: feature freeze. bug fixes only
  * 1.0: final version
 
