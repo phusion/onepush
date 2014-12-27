@@ -1,6 +1,8 @@
 require 'optparse'
 require 'json'
 require 'thread'
+require 'ipaddr'
+require 'uri'
 require 'net/http'
 require 'paint'
 require_relative '../base'
@@ -194,6 +196,51 @@ module Pomodori
         puts
         puts "-------------------------------------"
         puts Paint["#{success_greeting}, deploy succeeded! :-D", :green]
+        if using_amazon_ec2?
+          puts
+          puts "NOTICE: You are on Amazon EC2. Please don't forget to configure " +
+            "your EC2 Security Groups and ensuring that port 80 is accessible."
+        end
+      end
+
+      def using_amazon_ec2?
+        service   = "service".freeze
+        ec2       = "EC2".freeze
+        ip_prefix = "ip_prefix".freeze
+        blocks    = load_amazon_ip_ranges
+
+        blocks["prefixes"].any? do |block|
+          if block[service] == ec2
+            begin
+              ip = IPAddr.new(block[ip_prefix])
+              app_server_ips.any? do |app_server_ip|
+                ip.include?(app_server_ip)
+              end
+            rescue IPAddr::InvalidAddressError
+              false
+            end
+          else
+            false
+          end
+        end
+      end
+
+      def load_amazon_ip_ranges
+        JSON.parse(File.read(File.join(ROOT, "lib", "amazon-ip-ranges.json")))
+      end
+
+      def app_server_ips
+        @app_server_ips ||= begin
+          result = @params.app_server_addresses.map do |addr|
+            uri = URI.parse("ssh://#{addr}")
+            begin
+              Resolv.getaddress(uri.hostname)
+            rescue Resolv::ResolvError
+              nil
+            end
+          end
+          result.compact
+        end
       end
 
       def report_failure
