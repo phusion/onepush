@@ -1,6 +1,6 @@
 require 'json'
 require 'uri'
-require File.absolute_path(File.dirname(__FILE__) + "/../../../../lib/vagrant_insecure_key")
+require File.absolute_path(File.dirname(__FILE__) + "/../../../../../lib/vagrant_insecure_key")
 
 PARAMS.app_server_addresses.each_with_index do |address, i|
   if address == "localhost"
