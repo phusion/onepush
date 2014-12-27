@@ -234,12 +234,13 @@ task :check_server_empty => :autodetect_os do
     end
 
     if non_empty_host
-      fatal_and_abort "#{POMODORI_APP_NAME} is supposed to be used on empty servers with " +
-        "Ubuntu 14.04. The server #{non_empty_host} doesn't appear to be empty though: it " +
+      fatal_and_abort "#{POMODORI_APP_NAME} is supposed to be used on empty servers. " +
+        "The server #{non_empty_host} doesn't appear to be empty though: it " +
         "already has #{detected_component} installed. #{POMODORI_APP_NAME} therefore " +
         "refuses to operate.\n\n" +
-        "If you are sure you want to continue using #{POMODORI_APP_NAME} on these servers," +
-        "re-run #{POMODORI_APP_NAME} with --skip-server-empty-check."
+        "If you are sure you want to continue using #{POMODORI_APP_NAME} on these servers, " +
+        "re-run #{POMODORI_APP_NAME} with --skip-server-empty-check, but be aware that " +
+        "#{POMODORI_APP_NAME} may or may not run correctly."
     end
   end
 
