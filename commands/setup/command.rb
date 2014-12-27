@@ -15,10 +15,10 @@ module Pomodori
         maybe_load_default_config_files
         validate_and_finalize_options
         setup_paint_mode
-        prepare_announcement
+        prepare_announcement if @options[:announcements]
         if run_capistrano
           report_success
-          print_announcement
+          print_announcement if @options[:announcements]
         else
           report_failure
         end
@@ -28,7 +28,8 @@ module Pomodori
       def self.create_default_options
         HashWithIndifferentAccess.new(
           :app_server_addresses => [],
-          :ssh_keys             => []
+          :ssh_keys             => [],
+          :announcements        => false
         )
       end
 
@@ -76,6 +77,9 @@ module Pomodori
             "early if it doesn't") do
             options[:if_needed] = true
           end
+          opts.on("--skip-server-empty-check", "Do not check whether servers are empty") do
+            options[:check_server_empty] = false
+          end
           opts.on("--ssh-log FILENAME", String, "Log SSH output to the given file") do |filename|
             options[:ssh_log] = filename
           end
@@ -96,6 +100,9 @@ module Pomodori
           end
           opts.on("--progress-ceil NUMBER", Float, "Default: 1") do |val|
             options[:progress_ceil] = val
+          end
+          opts.on("--no-announcements", "Skip announcement messages") do
+            options[:announcements] = false
           end
 
           opts.separator ""

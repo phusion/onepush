@@ -210,3 +210,41 @@ task :check_setup_version_compatibility => :install_essentials do
     _check_setup_version_compatibility(host)
   end
 end
+
+task :check_server_empty => :autodetect_os do
+  if PARAMS.check_server_empty
+    non_empty_host = nil
+    detected_component = nil
+
+    on roles(:app) do |host|
+      if !test_cond("-e /etc/pomodori/setup/checked")
+        case APP_CONFIG.type
+        when 'ruby'
+          if test("which ruby")
+            detected_component = "Ruby"
+            non_empty_host = host
+          end
+        when 'nodejs'
+          if test("which node")
+            detected_component = "Node.js"
+            non_empty_host = host
+          end
+        end
+      end
+    end
+
+    if non_empty_host
+      fatal_and_abort "#{POMODORI_APP_NAME} is supposed to be used on empty servers with " +
+        "Ubuntu 14.04. The server #{non_empty_host} doesn't appear to be empty though: it " +
+        "already has #{detected_component} installed. #{POMODORI_APP_NAME} therefore " +
+        "refuses to operate.\n\n" +
+        "If you are sure you want to continue using #{POMODORI_APP_NAME} on these servers," +
+        "re-run #{POMODORI_APP_NAME} with --skip-server-empty-check."
+    end
+  end
+
+  on roles(:app) do |host|
+    sudo(host, "mkdir -p /etc/pomodori/setup && " +
+      "touch /etc/pomodori/setup/checked")
+  end
+end

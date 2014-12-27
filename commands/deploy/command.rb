@@ -74,6 +74,9 @@ module Pomodori
             "primary; database migrations will run there") do |address|
             options[:app_server_addresses] << address
           end
+          opts.on("--skip-server-empty-check", "Do not check whether servers are empty") do
+            options[:check_server_empty] = false
+          end
           opts.on("--ssh-log FILENAME", String, "Log SSH output to the given file") do |filename|
             options[:ssh_log] = filename
           end
@@ -162,7 +165,8 @@ module Pomodori
         SetupCommand.new([
           "--config-json", JSON.generate(@params),
           "--progress-ceil", "0.45",
-          "--if-needed"
+          "--if-needed",
+          "--no-announcements"
         ]).run
       end
 

@@ -16,6 +16,7 @@ module Pomodori
         klass.property :db_server_address, String
         klass.property :external_database, DatabaseConfig
 
+        klass.property :check_server_empty, BooleanValue, default: true
         klass.property :if_needed, BooleanValue, default: false
         klass.property :ssh_log, String
         klass.property :ssh_keys, Array[String], default: []

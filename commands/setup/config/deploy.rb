@@ -94,6 +94,7 @@ task :setup do
   report_progress(3, TOTAL_STEPS)
 
   invoke :check_setup_version_compatibility
+  invoke :check_server_empty
   invoke :check_resetup_necessary
   report_progress(4, TOTAL_STEPS)
 
