@@ -18,7 +18,13 @@ module Pomodori
           puts if i != 0
           puts Paint["Pushing to #{url}...", :bold]
           if !system("git", "push", url, "#{current_revision}:master", "-f")
-            abort " *** ERROR: push failed"
+            abort " *** ERROR: push failed.\n" +
+              "If you are experiencing authentication failures, then that's " +
+              "probably because this server doesn't have your SSH public key " +
+              "installed. In that case, please resolve this issue as follows:\n" +
+              " 1. Open your #{POMODORI_APP_NAME} config file.\n" +
+              " 2. Add your SSH public key to the `deployment_ssh_keys` option.\n" +
+              " 3. Run `pomodori setup` to install this new SSH public key."
           end
         end
       end
