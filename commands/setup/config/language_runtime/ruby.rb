@@ -27,7 +27,7 @@ def install_or_upgrade_rvm(host)
     end
   end
 
-  if host.username
+  if host.username && host.username != "root"
     sudo(host, "usermod -a -G rvm #{host.username}")
   end
 
