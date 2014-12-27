@@ -30,7 +30,7 @@ module Pomodori
         klass.property :install_common_ruby_app_dependencies, BooleanValue, default: true
       end
 
-      def install_database?
+      def manage_database_system?
         app_config.database && external_database.nil?
       end
 

@@ -117,6 +117,7 @@ task :setup do
   invoke :install_database_client_software
   report_progress(10, TOTAL_STEPS)
 
+  invoke :create_database_password
   invoke :setup_database
   invoke :create_app_database_config
   report_progress(11, TOTAL_STEPS)

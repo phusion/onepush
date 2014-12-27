@@ -81,6 +81,11 @@ module Pomodori
           end
         end
       end
+
+      def internal_network_route(address)
+        # TODO
+        address
+      end
     end
   end
 end
