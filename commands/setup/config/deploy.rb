@@ -125,6 +125,7 @@ task :setup do
   invoke :install_additional_services
   report_progress(12, TOTAL_STEPS)
 
+  invoke :create_app_hosts_entry
   invoke :create_app_vhost
   report_progress(13, TOTAL_STEPS)
 

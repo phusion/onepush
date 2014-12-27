@@ -43,6 +43,24 @@ task :create_app_dir => [:install_essentials, :create_app_user] do
   end
 end
 
+task :create_app_hosts_entry => :install_essentials do
+  log_notice "Creating /etc/hosts entry for app..."
+  on roles(:app) do |host|
+    apps = sudo_capture(host, "ls -1 /etc/pomodori/apps").strip.split(/[\r\n]+/)
+    apps.map! { |path| path.sub(/.*\//, '') }
+
+    content = apps.map do |app_id|
+      "127.0.0.1 pomodori-#{app_id}"
+    end.join("\n")
+
+    sudo_edit_file_section(host, "/etc/hosts",
+      "POMODORI/ONEPUSH APPS",
+      content,
+      :chmod => "644",
+      :chown => "root:")
+  end
+end
+
 task :create_app_vhost => :create_app_dir do
   log_notice "Creating web server virtual host for app..."
   app_dir = APP_CONFIG.app_dir
@@ -75,6 +93,10 @@ task :create_app_vhost => :create_app_dir do
   end
   config.puts "    include #{local_conf};"
   config.puts "}"
+  if APP_CONFIG.passenger
+    config.puts
+    config.puts "passenger_pre_start http://pomodori-#{PARAMS.app_id}/;"
+  end
   config.rewind
 
   local = StringIO.new
