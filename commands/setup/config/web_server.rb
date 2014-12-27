@@ -71,7 +71,7 @@ def install_nginx_from_source_with_passenger(host)
 end
 
 def enable_passenger_nginx
-  if PARAMS.install_passenger
+  if APP_CONFIG.passenger && PARAMS.install_passenger
     on roles(:app) do |host|
       config_file      = autodetect_nginx!(host)[:config_file]
       passenger_info   = autodetect_passenger!(host)
@@ -220,7 +220,7 @@ def install_apache
     end
   end
 
-  if PARAMS.install_passenger
+  if APP_CONFIG.passenger && PARAMS.install_passenger
     install_passenger_apache_module
   end
 end

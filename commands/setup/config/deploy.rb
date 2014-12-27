@@ -128,6 +128,7 @@ task :setup do
 
   invoke :create_app_hosts_entry
   invoke :create_app_vhost
+  invoke :create_app_passenger_sudoers_entry
   report_progress(13, TOTAL_STEPS)
 
   invoke :run_postsetup

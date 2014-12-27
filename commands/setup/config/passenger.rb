@@ -1,5 +1,5 @@
 task :install_passenger => :install_essentials do
-  if PARAMS.install_passenger
+  if APP_CONFIG.passenger && PARAMS.install_passenger
     log_notice "Installing Phusion Passenger application server..."
     on roles(:app) do |host|
       if passenger_installed?(host)

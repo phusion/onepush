@@ -10,9 +10,9 @@ namespace :deploy do
       # We do not put these files in the shared dir. The original
       # files are probably in version control, so on the server they
       # should be tied to a specific release.
-      Dir["#{PARAMS.app_root}/config/*.pomodori"].each do |path|
+      Dir[File.join(PARAMS.app_root, "config", "*.pomodori")].each do |path|
         basename = File.basename(path, ".pomodori")
-        subpath  = "config/#{basename}"
+        subpath  = File.join("config", basename)
         upload!(path, release_path.join(subpath))
         execute :chmod, "600", release_path.join(subpath)
       end
@@ -62,9 +62,16 @@ namespace :deploy do
 
   desc 'Restart application'
   task :restart do
-    on roles(:app), in: :sequence, wait: 5 do
-      #execute :'passenger-config', "restart-app", current_path, "--ignore-app-not-running"
-      execute :touch, release_path.join("tmp/restart.txt")
+    on roles(:app), in: :sequence, wait: 5 do |host|
+      if APP_CONFIG.passenger
+        passenger_info = autodetect_passenger(host)
+        if passenger_info
+          passenger_config = passenger_info[:config_command]
+          execute "sudo -k -n -H #{passenger_config} restart-app --ignore-app-not-running #{deploy_path}/"
+        else
+          execute :touch, release_path.join("tmp/restart.txt")
+        end
+      end
     end
   end
 

@@ -150,3 +150,36 @@ task :create_app_secrets => :create_app_dir do
     end
   end
 end
+
+task :create_app_passenger_sudoers_entry => :install_essentials do
+  if APP_CONFIG.passenger
+    invoke :install_passenger
+    log_notice "Creating sudo entry for app..."
+
+    on roles(:app) do |host|
+      passenger_config = autodetect_passenger!(host)[:config_command]
+      config_file      = "/etc/sudoers.d/pomodori-#{PARAMS.app_id}"
+
+      config = StringIO.new
+      config.puts "# Installed by #{POMODORI_APP_NAME}."
+      config.puts "#{APP_CONFIG.user} ALL=NOPASSWD: #{passenger_config} restart-app " +
+        "--ignore-app-not-running #{APP_CONFIG.app_dir}/"
+      config.puts "#{APP_CONFIG.user} ALL=NOPASSWD: #{passenger_config} restart-app " +
+        "--rolling-restart --ignore-app-not-running #{APP_CONFIG.app_dir}/"
+      config.rewind
+
+      if test_cond("-e #{config_file}")
+        orig = sudo_download_to_string(host, config_file)
+        should_edit = orig != config.string
+      else
+        should_edit = true
+      end
+
+      if should_edit
+        sudo_upload(host, config, config_file,
+          :chmod => "440",
+          :chown => "root:")
+      end
+    end
+  end
+end
