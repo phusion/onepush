@@ -6,7 +6,8 @@ GIT
 
 GIT
   remote: git://github.com/phusion/sshkit.git
-  revision: e0bc16f570c76610c8278779699aff8a16641ae0
+  revision: ee056e9daa4b62ed3735574ec6f9ad2e3f11b1fc
+  branch: pomodori
   specs:
     sshkit (1.6.1)
       colorize (>= 0.7.0)

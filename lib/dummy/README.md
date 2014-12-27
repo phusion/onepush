@@ -1,0 +1,1 @@
+This dummy directory only exists to keep RubyGems happy. RubyGems insists that pomodori.gemspec must have a non-empty require_paths.
