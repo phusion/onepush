@@ -7,6 +7,7 @@ module Pomodori
   SETUP_VERSION  = "1.0"
 
   DEFAULT_RUBY_VERSION = "2.1.5"
+  DEFAULT_NODEJS_VERSION = "0.10"
 
   POMODORI_APP_NAME = ENV["POMODORI_APP_NAME"] || "Pomodori"
 

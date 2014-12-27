@@ -59,6 +59,9 @@ module Pomodori
       ruby_version
       ruby_manager
       rvm_min_version
+      nodejs_version
+      nodejs_manager
+      nvm_min_version
 
       database_type
       database_name
@@ -78,6 +81,9 @@ module Pomodori
     property :ruby_version, String, default: DEFAULT_RUBY_VERSION
     property :ruby_manager, EnumValue(:ruby_manager, 'rvm'), default: 'rvm'
     property :rvm_min_version, String, default: '1.26.5'
+    property :nodejs_version, String, default: DEFAULT_NODEJS_VERSION
+    property :nodejs_manager, EnumValue(:nodejs_manager, 'nvm'), default: 'nvm'
+    property :nvm_min_version, String, default: '0.22.0'
 
     property :database_type, EnumValue(:database_type, 'postgresql'), default: 'postgresql'
     property :database_name, String

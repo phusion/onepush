@@ -45,10 +45,32 @@ def _check_resetup_necessary(host)
       return true
     end
 
-    ruby_version = APP_CONFIG.ruby_version
-    if !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
-      log_warn("Ruby version #{ruby_version} not installed. Will re-setup server.")
+    if ruby_version = APP_CONFIG.ruby_version
+      if !test("/usr/local/rvm/bin/rvm #{ruby_version} do ruby --version")
+        log_warn("Ruby version #{ruby_version} not installed. Will re-setup server.")
+        return true
+      end
+    end
+  elsif APP_CONFIG.type == 'nodejs' && APP_CONFIG.ruby_manager == 'nvm'
+    if !test_cond("-e /usr/local/nvm/nvm.sh")
+      log_warn("NVM is not installed. Will re-setup server.")
       return true
+    end
+
+    nvm_version = sudo_capture(host, "source /usr/local/nvm/nvm.sh && nvm --version").strip
+    if nvm_version.to_s.empty?
+      log_warn("NVM appears to be broken. Will re-setup server.")
+      return true
+    elsif compare_version(nvm_version, APP_CONFIG.nvm_min_version) < 0
+      log_warn "NVM #{nvm_version} is older than required version #{APP_CONFIG.nvm_min_version}. Will re-setup server."
+      return true
+    end
+
+    if nodejs_version = APP_CONFIG.nodejs_version
+      if !sudo_test(host, "source /usr/local/nvm/nvm.sh && nvm ls #{nodejs_version}")
+        log_warn("Node.js version #{nodejs_version} not installed. Will re-setup server.")
+        return true
+      end
     end
   end
 
