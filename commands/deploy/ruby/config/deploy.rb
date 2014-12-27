@@ -30,15 +30,33 @@ namespace :deploy do
           with rails_env: fetch(:rails_env) do
             output = capture(:rake, "-T")
             if output =~ / db:schema:/
-              if fetch(:schema_load) || database_empty?(host)
-                execute :rake, "db:schema:load"
-              else
-                execute :rake, "db:migrate"
-              end
+              load_schema_or_migrate(host)
             end
           end
         end
       end
+    end
+  end
+
+  def load_schema_or_migrate(host)
+    if fetch(:schema_load) || database_empty?(host)
+      if test_cond("-e db/structure.sql")
+        case APP_CONFIG.database_type
+        when 'postgresql'
+          execute b("source #{shared_path}/config/database.sh && " +
+            "psql < #{release_path}/db/structure.sql")
+        else
+          if test_cond("-e db/schema.rb")
+            execute :rake, "db:schema:load"
+          else
+            execute :rake, "db:migrate"
+          end
+        end
+      else
+        execute :rake, "db:schema:load"
+      end
+    else
+      execute :rake, "db:migrate"
     end
   end
 
