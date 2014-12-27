@@ -82,16 +82,56 @@ module Pomodori
       end
 
       def print_announcement
+        return if !@announcement_thread
         @announcement_thread.join
         if result = @announcement_thread[:result]
           begin
-            result = JSON.parse(result)
+            announcements = JSON.parse(result)
           rescue JSON::ParserError
             # Ignore error
           else
             puts
-            puts Paint[result.first[:message], :bold]
+            if message = find_most_recent_announcement(announcements)
+              puts Paint[message, :bold]
+              update_last_announcement_read_time
+            end
           end
+        end
+      end
+
+      def find_most_recent_announcement(announcements)
+        announcements = announcements.find_all do |ann|
+          Time.parse(ann["date"]) > last_read_announcement_date
+        end
+        announcements.sort! do |a, b|
+          Time.parse(a["date"]) <=> Time.parse(b["date"])
+        end
+        if announcements.any?
+          announcements.last["message"]
+        else
+          nil
+        end
+      end
+
+      def last_announcement_read_time_file
+        @last_announcement_read_time_file ||= begin
+          home = Etc.getpwuid.dir
+          File.join(home, ".pomodori", "last_announcement_read_time")
+        end
+      end
+
+      def last_read_announcement_date
+        if File.exist?(last_announcement_read_time_file)
+          Time.parse(File.read(last_announcement_read_time_file))
+        else
+          Time.now - (60 * 60 * 24 * 7)
+        end
+      end
+
+      def update_last_announcement_read_time
+        FileUtils.mkdir_p(File.dirname(last_announcement_read_time_file))
+        File.open(last_announcement_read_time_file, "w") do |f|
+          f.write(Time.now.to_s)
         end
       end
     end

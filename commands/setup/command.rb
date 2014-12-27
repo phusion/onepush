@@ -1,8 +1,11 @@
 require 'optparse'
 require 'json'
 require 'thread'
-require 'net/http'
+require 'time'
+require 'etc'
+require 'fileutils'
 require 'paint'
+require 'net/http'
 require_relative '../base'
 require_relative './params'
 require_relative '../../lib/utils/hash_with_indifferent_access'
@@ -16,6 +19,7 @@ module Pomodori
         validate_and_finalize_options
         setup_paint_mode
         prepare_announcement if @options[:announcements]
+        print_announcement; exit
         if run_capistrano
           report_success
           print_announcement if @options[:announcements]
@@ -29,7 +33,7 @@ module Pomodori
         HashWithIndifferentAccess.new(
           :app_server_addresses => [],
           :ssh_keys             => [],
-          :announcements        => false
+          :announcements        => true
         )
       end
 
