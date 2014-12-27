@@ -32,11 +32,11 @@ module Pomodori
 
       def maybe_load_default_config_files(dir = Dir.pwd)
         if !@options[:loaded]
-          if File.exist?("#{dir}/pomodori.json")
-            @options.merge!(JSON.parse(File.read("#{dir}/pomodori.json")))
+          if File.exist?(File.join(dir, "pomodori.json"))
+            @options.merge!(JSON.parse(File.read(File.join(dir, "pomodori.json"))))
             @options[:loaded] = true
-          elsif File.exist?("#{dir}/onepush.json")
-            @options.merge!(JSON.parse(File.read("#{dir}/onepush.json")))
+          elsif File.exist?(File.join(dir, "onepush.json"))
+            @options.merge!(JSON.parse(File.read(File.join(dir, "onepush.json"))))
             @options[:loaded] = true
           else
             abort " *** ERROR: No configuration file found. Please run " +
