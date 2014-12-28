@@ -90,8 +90,8 @@ module Pomodori
           rescue JSON::ParserError
             # Ignore error
           else
-            puts
             if message = find_most_recent_announcement(announcements)
+              puts
               puts Paint[message, :bold]
               update_last_announcement_read_time
             end

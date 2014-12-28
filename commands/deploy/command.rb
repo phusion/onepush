@@ -6,12 +6,12 @@ require 'etc'
 require 'fileutils'
 require 'paint'
 require 'net/http'
-require 'ipaddr'
 require 'uri'
 require_relative '../base'
 require_relative './params'
 require_relative '../setup/command'
 require_relative '../push/command'
+require_relative '../open/utils'
 require_relative '../../lib/utils/hash_with_indifferent_access'
 
 module Pomodori
@@ -37,6 +37,7 @@ module Pomodori
         HashWithIndifferentAccess.new(
           :app_server_addresses => [],
           :ssh_keys  => [],
+          :dry_run   => false,
           :push      => true,
           :task      => 'deploy'
         )
@@ -97,6 +98,9 @@ module Pomodori
           end
 
           opts.separator ""
+          opts.on("--dry-run", "Do not actually do anything") do
+            options[:dry_run] = true
+          end
           opts.on("--no-push", "Do not push Git before deploying") do
             options[:push] = false
           end
@@ -165,37 +169,50 @@ module Pomodori
       end
 
       def setup
-        SetupCommand.new([
-          "--config-json", JSON.generate(@params),
-          "--progress-ceil", "0.45",
-          "--if-needed",
-          "--no-announcements"
-        ]).run
+        if @options[:dry_run]
+          puts "Dry running, skipping setup."
+        else
+          SetupCommand.new([
+            "--config-json", JSON.generate(@params),
+            "--progress-ceil", "0.45",
+            "--if-needed",
+            "--no-announcements"
+          ]).run
+        end
       end
 
       def push
         if @options[:push]
           notice "Pushing code to server..."
-          PushCommand.new([
-            "--config-json", JSON.generate(@params),
-            "--app-root", @params.app_root
-          ]).run
-          if @params.progress
-            report_progress 0.55
+          if @options[:dry_run]
+            puts "Dry running, skipping push."
+          else
+            PushCommand.new([
+              "--config-json", JSON.generate(@params),
+              "--app-root", @params.app_root
+            ]).run
+            if @params.progress
+              report_progress 0.55
+            end
           end
         end
       end
 
       def run_capistrano
-        @params.progress_base = 0.55
-        ENV["POMODORI_PARAMS"] = JSON.generate(@params)
-        args = ["bundle", "exec", "cap"]
-        if @options[:trace]
-          args << "-t"
-        end
-        args.concat(["production", @options[:task]])
-        Dir.chdir("#{ROOT}/commands/deploy/ruby") do
-          system(*args)
+        if @options[:dry_run]
+          puts "Dry running, skipping deploy."
+          true
+        else
+          @params.progress_base = 0.55
+          ENV["POMODORI_PARAMS"] = JSON.generate(@params)
+          args = ["bundle", "exec", "cap"]
+          if @options[:trace]
+            args << "-t"
+          end
+          args.concat(["production", @options[:task]])
+          Dir.chdir("#{ROOT}/commands/deploy/ruby") do
+            system(*args)
+          end
         end
       end
 
@@ -203,50 +220,20 @@ module Pomodori
         puts
         puts "-------------------------------------"
         puts Paint["#{success_greeting}, deploy succeeded! :-D", :green]
-        if using_amazon_ec2?
-          puts
-          puts "NOTICE: You are on Amazon EC2. Please don't forget to configure " +
-            "your EC2 Security Groups and ensuring that port 80 is accessible."
+        puts
+
+        utils = OpenUtils.new(@params)
+        puts " * You now can access your app by running '" + Paint["pomodori open", :bold] + "'."
+        if !utils.app_dns_resolves_to_one_of_app_servers?
+          puts " * It seems you haven't setup DNS records for your servers yet! Please don't"
+          puts "   forget to do that at some point. 'pomodori open' works even when you haven't"
+          puts "   configured DNS yet."
+        else
+          puts " * Or access your app at: #{utils.public_url}"
         end
-      end
-
-      def using_amazon_ec2?
-        service   = "service".freeze
-        ec2       = "EC2".freeze
-        ip_prefix = "ip_prefix".freeze
-        blocks    = load_amazon_ip_ranges
-
-        blocks["prefixes"].any? do |block|
-          if block[service] == ec2
-            begin
-              ip = IPAddr.new(block[ip_prefix])
-              app_server_ips.any? do |app_server_ip|
-                ip.include?(app_server_ip)
-              end
-            rescue IPAddr::InvalidAddressError
-              false
-            end
-          else
-            false
-          end
-        end
-      end
-
-      def load_amazon_ip_ranges
-        JSON.parse(File.read(File.join(ROOT, "lib", "amazon-ip-ranges.json")))
-      end
-
-      def app_server_ips
-        @app_server_ips ||= begin
-          result = @params.app_server_addresses.map do |addr|
-            uri = URI.parse("ssh://#{addr}")
-            begin
-              Resolv.getaddress(uri.hostname)
-            rescue Resolv::ResolvError
-              nil
-            end
-          end
-          result.compact
+        if utils.using_amazon_ec2?
+          puts " * You are on Amazon EC2. Please don't forget to configure your EC2 Security"
+          puts "   Groups and " + Paint["ensuring that port 80 (HTTP) is accessible.", :bold]
         end
       end
 

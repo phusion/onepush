@@ -20,10 +20,8 @@ keys = []
 if PARAMS.vagrant_key
   keys << Pomodori.vagrant_insecure_key_path
 end
-if PARAMS.ssh_keys.any?
-  JSON.parse(PARAMS.ssh_keys).each do |filename|
-    keys << filename
-  end
+PARAMS.ssh_keys.each do |filename|
+  keys << filename
 end
 
 set :ssh_options, { :keys => keys }

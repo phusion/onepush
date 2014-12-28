@@ -45,6 +45,10 @@ module Pomodori
         Pomodori::Commands::DeployCommand.new(@argv).run
       when "migrate"
         abort "Not yet implemented."
+      when "open"
+        setup_bundler
+        require_relative '../commands/open/command'
+        Pomodori::Commands::OpenCommand.new(@argv).run
       when "help", "-h", "--help"
         help
       else
@@ -62,6 +66,7 @@ module Pomodori
       puts "  setup    Prepare servers with necessary stuff"
       puts "  push     Push app code to the server. Does not deploy your app"
       puts "  deploy   Deploy a new app release"
+      puts "  open     Open a browser window to access your app"
       puts
       puts "Type `pomodori <SUBCOMMAND> --help` to learn more about a specific subcommand."
       puts
