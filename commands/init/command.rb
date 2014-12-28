@@ -70,7 +70,7 @@ module Pomodori
         io.puts %Q{    // `pomodori deploy`, do not change this ID!}
         io.puts %Q{    "app_id": #{app_id.inspect},}
         io.puts
-        io.puts %Q{    // Host name(s) that your app listens on, in Nginx}
+        io.puts %Q{    // Host name(s) that your app should listen on, in Nginx}
         io.puts %Q{    // server_name format.}
         io.puts %Q{    "domain_names": #{domain_names.inspect},}
         io.puts
@@ -78,9 +78,13 @@ module Pomodori
         io.puts %Q{    // its SSH login info here. It must either be the root user,}
         io.puts %Q{    // or a user with passwordless sudo access.}
         io.puts %Q{    "server_address": "root@your-server.com",}
+        io.puts
         io.puts %Q{    // Uncomment if the above address is a Vagrant VM. Will}
         io.puts %Q{    // use the Vagrant insecure SSH key for SSH authentication.}
         io.puts %Q{    //"vagrant_key": true,}
+        io.puts %Q{    // Uncomment this if you need to login to your server with a}
+        io.puts %Q{    // particular SSH private key.}
+        io.puts %Q{    //"ssh_keys": ["/path-to-private-key"],}
         io.puts
 
         case detect_language
