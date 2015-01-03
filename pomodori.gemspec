@@ -21,6 +21,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency "capistrano-rvm"
   spec.add_dependency "capistrano-bundler"
   spec.add_dependency "capistrano-rails"
+  spec.add_dependency "capistrano-nvm"
+  spec.add_dependency "capistrano-npm"
   spec.add_dependency "json"
   spec.add_dependency "paint"
   spec.add_dependency "hashie", "~> 3.3"

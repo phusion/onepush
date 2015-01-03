@@ -1,0 +1,8 @@
+require_relative '../command'
+POMODORI_PARAMS_CLASS = Pomodori::Commands::DeployParams
+
+require 'capistrano/setup'
+require 'capistrano/deploy'
+import '../../../lib/capistrano_support.rb'
+import 'config/initialize.rb'
+import 'config/library.rb'

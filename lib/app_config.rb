@@ -68,7 +68,7 @@ module Pomodori
       database_user
     ).freeze
 
-    property :type, EnumValue(:type, 'ruby', 'nodejs'), default: 'ruby'
+    property :type, EnumValue(:type, 'ruby', 'nodejs'), required: true
     property :domain_names, String, required: true
     property :deployment_ssh_keys, Array[String], default: []
     property :postsetup_script, Array[String], default: []

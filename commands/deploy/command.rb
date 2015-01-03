@@ -210,7 +210,7 @@ module Pomodori
             args << "-t"
           end
           args.concat(["production", @options[:task]])
-          Dir.chdir("#{ROOT}/commands/deploy/ruby") do
+          Dir.chdir("#{ROOT}/commands/deploy/#{@app_config.type}") do
             system(*args)
           end
         end

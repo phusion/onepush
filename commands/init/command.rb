@@ -89,13 +89,13 @@ module Pomodori
 
         case detect_language
         when "ruby"
-          io.puts %Q{    "language": "ruby",}
+          io.puts %Q{    "type": "ruby",}
           io.puts %Q{    "ruby_version": "#{DEFAULT_RUBY_VERSION}",}
           if rails?
             io.puts %Q{    "rails": true,}
           end
         when "nodejs"
-          io.puts %Q{    "language": "nodejs",}
+          io.puts %Q{    "type": "nodejs",}
           io.puts %Q{    "nodejs_version": "#{DEFAULT_NODEJS_VERSION}",}
         end
 
@@ -159,7 +159,11 @@ module Pomodori
         if File.exist?(gemfile)
           "ruby"
         elsif File.exist?(package_json)
-          abort "Node.js is not yet supported."
+          "nodejs"
+        elsif File.exist?("app.js")
+          abort "It looks like this is a Node.js app, but you have no package.json. Please create a package.json first."
+        else
+          abort "Unable to autodetect the application's programming language"
         end
       end
 
