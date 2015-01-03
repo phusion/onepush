@@ -13,7 +13,7 @@ module Pomodori
 
       def check_hosts_file_garbage!
         internal_app_ips = resolve_hostname(internal_app_hostname)
-        if internal_app_ips.size > 1 || !app_server_ips.include?(internal_app_ips[0])
+        if internal_app_ips.size > 1 || (internal_app_ips.any? && !app_server_ips.include?(internal_app_ips[0]))
           abort " *** ERROR: It looks like you have old entries in /etc/hosts which are interfering. " +
               "Please edit /etc/hosts, remove all entries that contain '#{internal_app_hostname}', " +
               "then re-run 'pomodori open'."
